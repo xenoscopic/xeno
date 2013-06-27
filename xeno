@@ -48,6 +48,9 @@ def parse_arguments():
     """Method to parse command line arguments.
 
     This function will parse command line arguments using the argparse module.
+
+    Returns:
+        A namespace containing the parsed arguments.
     """
     # Set up the core parser
     parser = argparse.ArgumentParser(
