@@ -1,47 +1,16 @@
-#!/usr/bin/env python
-
-# Future imports to support fancy print() on Python 2.x
-from __future__ import print_function
-
-
-# Global configuration information
-XENO_VERSION = (0, 0, 1)
-XENO_MIN_PYTHON_VERSION = (2, 7, 0)
-
-
-# Short utility macros
-STRINGIFY_VERSION = lambda v: '.'.join((str(i) for i in v))
-
-
 # Check the python version before proceeding too far
-import sys
-PYTHON_VERSION = sys.version_info[0:3]
-if PYTHON_VERSION < XENO_MIN_PYTHON_VERSION:
-    print(
-        'ERROR: Your version of python ({0}) is too old.  The minimum '
-        'required version is {1}.'.format(
-            STRINGIFY_VERSION(PYTHON_VERSION),
-            STRINGIFY_VERSION(XENO_MIN_PYTHON_VERSION)
-        ),
-        file=sys.stderr
-    )
-    sys.exit(1)
-
+from .version import check_python_version
+check_python_version()
 
 # System imports
+import sys
 import argparse
-from os.path import join, expanduser, exists, isfile
-import json
-from ConfigParser import SafeConfigParser
 
-
-def print_version():
-    """Print xeno version information
-
-    This method will print a string to the command line representing the
-    version of xeno.  It will not exit afterwards.
-    """
-    print(STRINGIFY_VERSION(XENO_VERSION))
+# xeno imports
+from .version import XENO_VERSION, STRINGIFY_VERSION
+from .output import print_warning, print_error
+from .configuration import configuration_file_path, load_configuration, \
+    save_configuration
 
 
 def parse_arguments():
@@ -99,96 +68,6 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def configuration_file_path(check=True):
-    """Returns the configuration file path for xeno.
-
-    This method will compute the configuration file path and, if requested,
-    validate that the path exists and that it is a file (or at least a symlink
-    to a file).  If the check fails, this method will print an error and exit.
-
-    Args:
-        check: Whether or not to validate the configuration file path
-
-    Returns:
-        A string representing the configuration file path.
-    """
-    # Compute the path
-    config_file_path = join(expanduser('~'), '.xenoconfig')
-
-    # Do basic validation on the config file path
-    if check and exists(config_file_path) and not isfile(config_file_path):
-        print(
-            'ERROR: Configuration path ({0}) exists but is not a file'.format(
-                config_file_path
-            ),
-            file=sys.stderr
-        )
-        sys.exit(1)
-
-    return config_file_path
-
-
-def load_configuration():
-    """Loads the xeno configuration object.
-
-    This method loads a ConfigParser.SafeConfigParser from the configuration
-    path.  If the configuration path does not exist, this method returns an
-    empty SafeConfigParser.
-
-    Returns:
-        An initialized (but possibly empty) ConfigParser.SafeConfigParser.
-    """
-    # Grab the configuration file path
-    config_file_path = configuration_file_path()
-
-    # Create a configuration parser
-    configuration = SafeConfigParser()
-
-    # Try to read in any existing configuration
-    try:
-        configuration.read(config_file_path)
-    except Exception, e:
-        print(
-            'ERROR: Unable to read configuration file ({0}): {1}'.format(
-                config_file_path,
-                str(e)
-            ),
-            file=sys.stderr
-        )
-        sys.exit(1)
-
-    return configuration
-
-
-def save_configuration(config):
-    """Saves a configuration object to the configuration file path.
-
-    This method will take a ConfigParser.SafeConfigParser and save it to the
-    xeno configuration file path, or if it is unable to do so, will print an
-    error and exit.
-
-    Args:
-        config: A ConfigParser.SafeConfigParser representing the configuration
-            to save
-    """
-    # Grab the configuration file path
-    config_file_path = configuration_file_path()
-
-    # Try to save it
-    try:
-        with open(config_file_path, 'w') as config_file:
-            config.write(config_file)
-    except Exception, e:
-        print(
-            'ERROR: Unable to save configuration to {0}: {1}'.format(
-                config_file_path,
-                str(e)
-            ),
-            file=sys.stderr
-        )
-        sys.exit(1)
-
-
 def config(args):
     """The config subcommand handler.
 
@@ -207,33 +86,31 @@ def config(args):
         # inform them that this is not respected without specifying a key
         # because it is dangerous.
         if args.clear:
-            print(
-                'WARNING: Specifying \'config --clear\' without specifying a '
-                'key is prohibited, because you can easily destroy your '
+            print_warning(
+                'Specifying \'config --clear\' without specifying a key is '
+                'prohibited, because you can easily destroy your '
                 'configuration.  If you really want to clear all of your '
                 'settings, you can delete your configuration file at '
                 '\'{0}\''.format(
                     configuration_file_path(False)
-                ),
-                file=sys.stderr
+                )
             )
-            sys.exit(1)
+            exit(1)
 
         # Otherwise, assume they just want to see all configuration values
         configuration.write(sys.stdout)
-        sys.exit(0)
+        exit(0)
 
     # Parse up the key
     try:
         section, option = args.key.split('.')
     except:
-        print(
-            'ERROR: Invalid configuration key \'{0}\''.format(
+        print_error(
+            'Invalid configuration key \'{0}\''.format(
                 args.key
-            ),
-            file=sys.stderr
+            )
         )
-        sys.exit(1)
+        exit(1)
 
     # If they have specified a key, but have not specified a value, then either
     # clear or print the value of the key
@@ -252,36 +129,35 @@ def config(args):
                 # case we can just consider it cleared anyway
                 pass
             save_configuration(configuration)
-            sys.exit(0)
+            exit(0)
 
         # Otherwise, print the value of the key
         try:
             print(configuration.get(section, option))
         except:
-            print(
-                'ERROR: No configuration specified for key \'{0}\''.format(
+            print_error(
+                'No configuration specified for key \'{0}\''.format(
                     args.key
                 ),
                 file=sys.stderr
             )
-        sys.exit(0)
+        exit(0)
 
     # At this point, they must have specified a value.  If they have also
     # specified '--clear', warn them that it doesn't make sense to clear and
     # set a value
     if args.clear:
-        print(
-            'WARNING: You have specified a value (\'{0}\') for the key '
-            '(\'{1}\'), but you have also specified the \'--clear\' option.  '
-            'If you want to clear the value, specify only \'--clear\'.  If '
-            'you want to specify the value, then provide only the value but '
-            'do not use \'--clear\'.'.format(
+        print_warning(
+            'You have specified a value (\'{0}\') for the key (\'{1}\'), but '
+            'you have also specified the \'--clear\' option.  If you want to '
+            'clear the value, specify only \'--clear\'.  If you want to '
+            'specify the value, then provide only the value but do not use '
+            '\'--clear\'.'.format(
                 args.value,
                 args.key
-            ),
-            file=sys.stderr
+            )
         )
-        sys.exit(1)
+        exit(1)
 
     # They must be wanting to write the value, so make sure the section exists
     if not configuration.has_section(section):
@@ -290,7 +166,7 @@ def config(args):
     # Write the specified value
     configuration.set(section, option, args.value)
     save_configuration(configuration)
-    sys.exit(0)
+    exit(0)
 
 
 def edit(args):
@@ -333,7 +209,3 @@ def main():
 
     # All done
     sys.exit(0)
-
-if __name__ == '__main__':
-    # If the module is being called directly, call the main entry point
-    main()
