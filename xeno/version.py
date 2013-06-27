@@ -1,6 +1,6 @@
 # System imports
 import sys
-
+from os import linesep
 
 # Version constants
 XENO_VERSION = (0, 0, 1)
@@ -26,9 +26,10 @@ def check_python_version():
     if PYTHON_VERSION < XENO_MIN_PYTHON_VERSION:
         sys.stderr.write(
             'ERROR: Your version of python ({0}) is too old.  The minimum '
-            'required version is {1}.'.format(
+            'required version is {1}.{2}'.format(
                 STRINGIFY_VERSION(PYTHON_VERSION),
-                STRINGIFY_VERSION(XENO_MIN_PYTHON_VERSION)
+                STRINGIFY_VERSION(XENO_MIN_PYTHON_VERSION),
+                linesep
             )
         )
         sys.exit(1)
