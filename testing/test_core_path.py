@@ -108,3 +108,8 @@ class TestPath(unittest.TestCase):
         # Create the path, making sure it fails on the empty path
         with self.assertRaises(ValueError):
             p = Path('jacob@')
+
+
+# Run the tests if this is the main module
+if __name__ == '__main__':
+    unittest.main()
