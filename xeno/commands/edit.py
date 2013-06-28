@@ -57,9 +57,10 @@ def main():
             args.path_or_remote
         ))
 
-    # If the path is local, just open it in the editor
+    # If the path is local, just open it in the editor.  This will replace the
+    # current process, so we don't need to exit.
     if path.is_local:
-        launch_editor_on_local_path(path.file_path, replace=True)
+        launch_editor_on_local_path(path.file_path)
 
     # All done
     exit(0)

@@ -1,26 +1,24 @@
 # System imports
 import os
 from sys import exit
-import subprocess
 
 # xeno imports
 from .output import print_error
 from .configuration import load_configuration
 
 
-def launch_editor_on_local_path(local_path, replace=False):
-    """Launches the user's editor on the specified local path.
+def launch_editor_on_local_path(local_path):
+    """Launches the user's editor on the specified local path, replacing the
+    current executable.
 
     If no editor can be identified from xeno settings or the EDITOR environment
     variables, prints an error and exits.
 
     Args:
         local_path: A string representing the local path to open.
-        replace: Whether or not to replace the current process with the editor
 
     Returns:
-        If replace is True, this method does not return.  If replace is false,
-        returns a subprocess.Popen object representing the editor.
+        This method does not return.
     """
     # Load configuration
     configuration = load_configuration()
@@ -41,8 +39,5 @@ def launch_editor_on_local_path(local_path, replace=False):
                     'variable.')
         exit(1)
 
-    # Launch the editor in the manner requested
-    if replace:
-        os.execvp(editor, [editor, local_path])
-    else:
-        return subprocess.Popen([editor, local_path])
+    # Launch the editor, replacing the current process
+    os.execvp(editor, [editor, local_path])
