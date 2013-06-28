@@ -25,8 +25,8 @@ def main():
     # Create an SSH process
     ssh = subprocess.Popen(['ssh'] + sys.argv[1:],
                            stdout=subprocess.PIPE)
-    
-    # While it is still running, grab the output and write it 
+
+    # While it is still running, grab the output and write it
     # character-by-character to our own STDOUT, watching for xeno
     # initializations
     current_line = ''
