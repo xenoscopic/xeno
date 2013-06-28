@@ -16,7 +16,8 @@ setup(
         'console_scripts': [
             'xeno = xeno.commands.main:main',
             'xeno-config = xeno.commands.config:main',
-            'xeno-edit = xeno.commands.edit:main'
+            'xeno-edit = xeno.commands.edit:main',
+            'xeno-ssh = xeno.commands.ssh:main'
         ],
     },
 
