@@ -48,10 +48,8 @@ def parse_arguments():
     subcommand_group = parser.add_argument_group(
         title='subcommands',
         description='xeno farms out its work to a variety of subcommands.  '
-        'The primary subcommands are \'config\' and \'edit\'.  By default, '
-        'xeno treats its direct invocation as \'xeno edit\', making it easier '
-        'to treat \'xeno\' like a replacement for your editor command.  To '
-        'view help information on a particular subcommand, use \'xeno '
+        'The primary subcommands are \'config\' and \'edit\'.  To view help '
+        'information on a particular subcommand, use \'xeno '
         'EXAMPLE_SUBCOMMAND --help\'.'
     )
 
@@ -64,15 +62,20 @@ def parse_arguments():
     # Do the parsing
     known_args, unknown_args = parser.parse_known_args()
 
-    # Check if they want help, but only display it if there is no subcommand
-    # specified, otherwise we should pass the help flag through to the
-    # subcommand
-    if known_args.help:
-        if known_args.subcommand is None:
-            parser.print_help()
+    # If the user has not specified a subcommand, print help, and exit
+    # with failure/success depending on whether or not they asked for help
+    if known_args.subcommand is None:
+        parser.print_help()
+        if known_args.help:
             exit(0)
         else:
-            unknown_args = ['-h'] + unknown_args
+            exit(1)
+
+    # At this point, the user must have specified a subcommand.  If they have
+    # requested help, then we should pass the help flag through to the
+    # subcommand.
+    if known_args.help:
+        unknown_args = ['-h'] + unknown_args
 
     return known_args, unknown_args
 
@@ -137,16 +140,12 @@ def main():
 
     This function is invoked when the module is being executed directly.
     """
-    # Parse command line arguments
+    # Parse command line arguments.  If no subcommand is specified, this will
+    # print help and exit.
     known_args, unknown_args = parse_arguments()
 
-    # Grab the subcommand
-    subcommand = ('edit'
-                  if known_args.subcommand is None
-                  else known_args.subcommand)
-
     # Check if the specified command is valid
-    executable_name = validate_subcommand(subcommand)
+    executable_name = validate_subcommand(known_args.subcommand)
 
     # Dispatch the remaining arguments to the subcommand
     dispatch_subcommand(executable_name, unknown_args)

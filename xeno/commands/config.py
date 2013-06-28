@@ -5,7 +5,7 @@ import argparse
 
 # xeno imports
 from ..core.output import print_warning, print_error
-from ..configuration import configuration_file_path, load_configuration, \
+from ..core.configuration import configuration_file_path, load_configuration, \
     save_configuration
 
 
