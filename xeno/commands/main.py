@@ -50,7 +50,9 @@ def parse_arguments():
         description='xeno farms out its work to a variety of subcommands.  '
         'The primary subcommands are \'config\' and \'edit\'.  To view help '
         'information on a particular subcommand, use \'xeno '
-        'EXAMPLE_SUBCOMMAND --help\'.'
+        'EXAMPLE_SUBCOMMAND --help\'.  For your convenience, the \'xen\' '
+        'command has been created as an alias of \'xeno edit\', providing a '
+        'useful command for you to use on a daily basis to initiate editing.'
     )
 
     # Add the subcommand argument, hiding its help information
