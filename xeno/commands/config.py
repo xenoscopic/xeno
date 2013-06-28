@@ -19,7 +19,7 @@ def parse_arguments():
     """
     # Set up the core parser
     parser = argparse.ArgumentParser(
-        description='view/edit configuration information',
+        description='view/edit xeno configuration information',
         usage='xeno-config [-h|--help] [-c|--clear] [key] [value]',
     )
 
