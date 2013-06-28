@@ -1,15 +1,11 @@
-# Check the python version before proceeding too far
-from .version import check_python_version
-check_python_version()
-
 # System imports
 import sys
+from sys import exit
 import argparse
 
 # xeno imports
-from .version import XENO_VERSION, STRINGIFY_VERSION
-from .output import print_warning, print_error
-from .configuration import configuration_file_path, load_configuration, \
+from ..core.output import print_warning, print_error
+from ..configuration import configuration_file_path, load_configuration, \
     save_configuration
 
 
@@ -19,64 +15,41 @@ def parse_arguments():
     This function will parse command line arguments using the argparse module.
 
     Returns:
-        A namespace containing the parsed arguments.
+        A namespace of the arguments.
     """
     # Set up the core parser
     parser = argparse.ArgumentParser(
-        description='synchronous remote file editing'
+        description='view/edit configuration information',
+        usage='xeno-config [-h|--help] [-c|--clear] [key] [value]',
     )
-    parser.add_argument('--version',
-                        action='version',
-                        version=STRINGIFY_VERSION(XENO_VERSION))
 
-    # Create subparsers array for individual xeno commands
-    # HACK: Technically passing these kwargs to 'add_subparsers' isn't really
-    # documented, but it just makes things look much nicer in the help menu
-    subparsers = parser.add_subparsers(title='subcommands',
-                                       help='(command purpose)',
-                                       dest='subcommand_name')
-
-    # Set up the config command parser
-    config_parser = subparsers.add_parser('config',
-                                          help='view/modify xeno settings')
-    config_parser.add_argument('-c',
-                               '--clear',
-                               action='store_true',
-                               dest='clear')
-    config_parser.add_argument('key',
-                               help='the configuration key to view/edit',
-                               action='store',
-                               nargs='?')
-    config_parser.add_argument('value',
-                               help='the value to set for the configuration',
-                               action='store',
-                               nargs='?')
-
-    # Set up the edit command parser
-    edit_parser = subparsers.add_parser('edit',
-                                        help='edit paths with xeno')
-    edit_parser.add_argument('path-or-remote',
-                             help='the local or remote path to edit',
-                             action='store',
-                             nargs=1)
-
-    # Set up the serve command parser
-    serve_parser = subparsers.add_parser('serve',
-                                         help='serve paths from remote')
+    # Add arguments
+    parser.add_argument('-c',
+                        '--clear',
+                        action='store_true',
+                        dest='clear')
+    parser.add_argument('key',
+                        help='the configuration key to view/edit',
+                        action='store',
+                        nargs='?')
+    parser.add_argument('value',
+                        help='the value to set for the configuration',
+                        action='store',
+                        nargs='?')
 
     # Do the parsing
     return parser.parse_args()
 
 
-def config(args):
+def main():
     """The config subcommand handler.
 
     This method handles the 'config' subcommand by either showing, editing, or
     clearing the specified configuration key, and then exiting.
-
-    Args:
-        args: The command line argument object
     """
+    # Parse arguments
+    args = parse_arguments()
+
     # Load the configuration
     configuration = load_configuration()
 
@@ -166,46 +139,6 @@ def config(args):
     # Write the specified value
     configuration.set(section, option, args.value)
     save_configuration(configuration)
-    exit(0)
-
-
-def edit(args):
-    """The edit subcommand handler.
-
-    This method handles the 'edit' subcommand by starting an editing session.
-
-    Args:
-        args: The command line argument object
-    """
-    pass
-
-
-def serve(args):
-    """The serve handler.
-
-    This method handles the 'serve' subcommand by starting a server session.
-
-    Args:
-        args: The command line argument object
-    """
-    pass
-
-
-def main():
-    """Main entry point for xeno program.
-
-    This function is invoked when the module is being executed directly.
-    """
-    # Parse command line arguments
-    args = parse_arguments()
-
-    # Dispatch the subcommand arguments to the appropriate handler
-    if args.subcommand_name == 'config':
-        config(args)
-    elif args.subcommand_name == 'edit':
-        edit(args)
-    elif args.subcommand_name == 'serve':
-        serve(args)
 
     # All done
-    sys.exit(0)
+    exit(0)

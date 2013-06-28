@@ -14,7 +14,9 @@ setup(
     packages=['xeno'],
     entry_points={
         'console_scripts': [
-            'xeno = xeno.main:main'
+            'xeno = xeno.commands.main:main',
+            'xeno-config = xeno.commands.config:main',
+            'xeno-edit = xeno.commands.edit:main'
         ],
     },
 
