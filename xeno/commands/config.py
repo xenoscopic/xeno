@@ -29,7 +29,7 @@ def parse_arguments():
                         action='store_true',
                         dest='clear')
     parser.add_argument('key',
-                        help='the configuration key to view/edit',
+                        help='the configuration key to view/set/clear',
                         action='store',
                         nargs='?')
     parser.add_argument('value',
