@@ -33,7 +33,7 @@ def check_for_initialization_token(text):
     # See if there is a match
     global _TOKEN_REGEX
     match = _TOKEN_REGEX.match(text)
-    
+
     # If there was no match, give up
     if match is None:
         return None

@@ -117,7 +117,7 @@ def initialize_remote_repository(path):
                 'Unable to add initial files',
                 cwd=repo_path,
                 error_cleanup=error_cleanup)
-    
+
     # Add all files and do the initial commit
     _check_call(['git',
                  'commit',

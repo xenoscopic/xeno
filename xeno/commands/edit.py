@@ -96,7 +96,7 @@ def remote_ssh_command_from_remote_path(remote_path):
                                  remote_path.hostname,
                                  remote_path.port,
                                  remote_repo_path)
-    
+
 
 def main():
     """The edit subcommand handler.
@@ -116,14 +116,14 @@ def main():
         ))
 
     # Determine if we are running locally or in an SSH session
-    in_ssh = os.environ.has_key('SSH_CONNECTION')
+    in_ssh = 'SSH_CONNECTION' in os.environ
 
     # If the path is local...
     if path.is_local:
         if in_ssh:
             # If we're running in SSH, then we need to create the 'remote'
-            # repository for the client to clone and spit out the initialization
-            # string.
+            # repository for the client to clone and spit out the
+            # initialization string
             repo_path = initialize_remote_repository(path.file_path)
             print(create_initialization_token(repo_path))
             exit(0)

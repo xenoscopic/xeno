@@ -187,7 +187,7 @@ def main():
             # Launch our editor
             #run_editor_on_local_path('/Users/jacob/Projects/owls',
             #                            exit_on_no_editor=False)
-            
+
             # Resume SSH
             ssh.send_signal(signal.SIGCONT)
 
