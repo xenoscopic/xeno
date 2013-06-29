@@ -41,7 +41,7 @@ def get_working_directory():
 
     # If it doesn't exist, try to create it
     try:
-        makedirs(path)
+        makedirs(path, 0700)
     except OSError, e:
         print_error('Unable to create xeno working directory: {0}'.format(
             str(e)

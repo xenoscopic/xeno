@@ -99,12 +99,17 @@ def initialize_remote_repository(path):
             exclude_file.write('*\n')
             exclude_file.write('!{0}\n'.format(basename(path)))
 
-        # If this is not a file, and the work tree is at a higher path than the
-        # repository, add the repository as an exclude path
+        # If this is not a file, there are a few things to do
         if not is_file:
+            # First, if the work tree is at a higher path than the repository,
+            # add the repository as an exclude path
             relative_path = relpath(repo_path, work_path)
             if not relative_path.startswith('..'):
                 exclude_file.write('{0}\n'.format(relative_path))
+
+            # All the major SCM dirs to the exclude
+            for scm_dir in ['.git', '.svn', '.hg']:
+                exclude_file.write('{0}\n'.format(scm_dir))
 
     # Add all files and do the initial commit.  We have to use this wildcard
     # expression for the pathspec due to how git behaves when the work tree is
@@ -130,9 +135,82 @@ def initialize_remote_repository(path):
                 cwd=repo_path,
                 error_cleanup=error_cleanup)
 
+    # Create an incoming branch
+    _check_call(['git',
+                 'branch',
+                 'incoming'],
+                'Unable to create incoming branch',
+                cwd=repo_path,
+                error_cleanup=error_cleanup)
+
     # TODO: Install hooks
 
     return repo_path
+
+
+def clone(clone_url, local_destination):
+    """Clones a remote URL to a local path, pulling down all branches and
+    setting them up to track from the remote.
+
+    This method will print an error and exit on failure.
+
+    Args:
+        clone_url: The repository URL
+        local_destination: The local path to clone into.  It must not exist.
+    """
+    # Do the clone
+    _check_call(['git',
+                 'clone',
+                 clone_url,
+                 local_destination],
+                'Unable to clone remote repository')
+
+
+def add_metadata_to_repo(repo_path, key, value):
+    """Sets the specified key to the specified value on the specified
+    repository, adding it in the xeno section.
+
+    This method will print an error and exit on failure.
+
+    Args:
+        repo_path: The path to the repository
+        key: The key to set, must be camel case
+        value: The value to set the key to
+    """
+    # Set the value
+    _check_call(['git',
+                 'config',
+                 'xeno.{0}'.format(key),
+                 value],
+                'Unable to set repository metadata',
+                cwd=repo_path)
+
+
+def get_metadata_from_repo(repo_path, key):
+    """Retrieve the metadata associated with the specified key in the specified
+    repository under the xeno section.
+
+    This method will print an error and exit on failure.  If the specified key
+    doesn't exist, this method returns an empty string.
+
+    Args:
+        repo_path: The path to the repository
+        key: The key to read, must be camel case
+
+    Returns:
+        The value associated with the key, if it exists, otherwise an empty
+        string.  This method exits on failure.
+    """
+    try:
+        output = subprocess.check_output(['git',
+                                          'config',
+                                          'xeno.{0}'.format(key)],
+                                         cwd=repo_path)
+    except:
+        print_error('Unable to read repository metadata')
+        exit(1)
+
+    return output.strip()
 
 
 def cloneable_remote_path(username, hostname, port, repo_path):

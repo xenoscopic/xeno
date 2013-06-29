@@ -10,7 +10,9 @@ from ..core.path import Path
 from ..core.editor import run_editor_on_local_path
 from ..core.git import initialize_remote_repository, cloneable_remote_path
 from ..core.protocol import create_initialization_token, \
-    check_for_initialization_token
+    check_for_initialization_token, INITIALIZATION_KEY_IS_FILE, \
+    INITIALIZATION_KEY_REMOTE_PATH, INITIALIZATION_KEY_REPOSITORY_PATH
+from ..core.syncing import start_syncing
 
 
 def parse_arguments():
@@ -45,7 +47,7 @@ def parse_arguments():
     return args
 
 
-def remote_ssh_command_from_remote_path(remote_path):
+def initialization_token_from_remote_path(remote_path):
     """Remotely executes xeno-edit on the remote path and returns the
     initialization token path or exits.
 
@@ -54,8 +56,7 @@ def remote_ssh_command_from_remote_path(remote_path):
             path
 
     Returns:
-        The cloneable remote path (username/hostname included) on success,
-        exits on failure.
+        The initialization token dictionary on success, exits on failure.
     """
     # Construct the command list
     command_list = ['ssh']
@@ -86,16 +87,12 @@ def remote_ssh_command_from_remote_path(remote_path):
         exit(1)
 
     # Look for a token
-    remote_repo_path = check_for_initialization_token(output)
-    if remote_repo_path is None:
+    initialization_token = check_for_initialization_token(output)
+    if initialization_token is None:
         print_error('Unable to get initialization token')
         exit(1)
 
-    # Compose it into a cloneable remote path
-    return cloneable_remote_path(remote_path.username,
-                                 remote_path.hostname,
-                                 remote_path.port,
-                                 remote_repo_path)
+    return initialization_token
 
 
 def main():
@@ -125,7 +122,7 @@ def main():
             # repository for the client to clone and spit out the
             # initialization string
             repo_path = initialize_remote_repository(path.file_path)
-            print(create_initialization_token(repo_path))
+            print(create_initialization_token(path.file_path, repo_path))
             exit(0)
         else:
             # If we're not running in SSH, then the user is just using
@@ -134,9 +131,25 @@ def main():
 
     # Otherwise the path is remote, so we need to invoke SSH to the remote
     # destination and run the xeno-edit command there to get the clone-able
-    # path
-    cloneable_path = remote_ssh_command_from_remote_path(path)
-    print(cloneable_path)
+    # path.  This method will exit if it fails.
+    initialization_token = initialization_token_from_remote_path(path)
 
-    # All done
-    exit(0)
+    # Parse up the initialization token
+    remote_is_file = initialization_token[INITIALIZATION_KEY_IS_FILE]
+    remote_path = initialization_token[INITIALIZATION_KEY_REMOTE_PATH]
+    remote_repo_path = \
+        initialization_token[INITIALIZATION_KEY_REPOSITORY_PATH]
+
+    # Compute the cloneable path
+    cloneable_path = cloneable_remote_path(path.username,
+                                           path.hostname,
+                                           path.port,
+                                           remote_repo_path)
+
+     # Start syncing
+    local_path = start_syncing(remote_is_file,
+                               remote_path,
+                               cloneable_path)
+
+    # Launch our editor
+    exit(run_editor_on_local_path(local_path))

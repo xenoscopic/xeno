@@ -15,8 +15,11 @@ import signal
 from ..core.output import print_warning, print_error
 from ..core.paths import get_working_directory
 from ..core.editor import run_editor_on_local_path
-from ..core.protocol import check_for_initialization_token
+from ..core.protocol import check_for_initialization_token, \
+    INITIALIZATION_KEY_IS_FILE, INITIALIZATION_KEY_REMOTE_PATH, \
+    INITIALIZATION_KEY_REPOSITORY_PATH
 from ..core.git import cloneable_remote_path
+from ..core.syncing import start_syncing
 
 
 def parse_arguments():
@@ -171,10 +174,16 @@ def main():
             break
 
         # Check for our marker
-        remote_repo_path = check_for_initialization_token(line)
-        if remote_repo_path is not None:
+        initialization_token = check_for_initialization_token(line)
+        if initialization_token is not None:
             # Suspend SSH
             ssh.send_signal(signal.SIGSTOP)
+
+            # Parse up the initialization token
+            remote_is_file = initialization_token[INITIALIZATION_KEY_IS_FILE]
+            remote_path = initialization_token[INITIALIZATION_KEY_REMOTE_PATH]
+            remote_repo_path = \
+                initialization_token[INITIALIZATION_KEY_REPOSITORY_PATH]
 
             # Compute the cloneable path
             cloneable_path = cloneable_remote_path(username,
@@ -182,11 +191,14 @@ def main():
                                                    port,
                                                    remote_repo_path)
 
-            print(cloneable_path)
+            # Start syncing
+            local_path = start_syncing(remote_is_file,
+                                       remote_path,
+                                       cloneable_path)
 
             # Launch our editor
-            #run_editor_on_local_path('/Users/jacob/Projects/owls',
-            #                            exit_on_no_editor=False)
+            run_editor_on_local_path(local_path,
+                                     exit_on_no_editor=False)
 
             # Resume SSH
             ssh.send_signal(signal.SIGCONT)
