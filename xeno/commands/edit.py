@@ -151,5 +151,9 @@ def main():
                                remote_path,
                                cloneable_path)
 
+    # Validate the path
+    if local_path is None:
+        exit(1)
+
     # Launch our editor
     exit(run_editor_on_local_path(local_path))

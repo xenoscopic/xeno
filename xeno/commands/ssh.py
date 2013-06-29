@@ -196,9 +196,10 @@ def main():
                                        remote_path,
                                        cloneable_path)
 
-            # Launch our editor
-            run_editor_on_local_path(local_path,
-                                     exit_on_no_editor=False)
+            # Launch our editor, if the path is valid
+            if local_path is not None:
+                run_editor_on_local_path(local_path,
+                                         exit_on_no_editor=False)
 
             # Resume SSH
             ssh.send_signal(signal.SIGCONT)

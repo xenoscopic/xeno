@@ -166,6 +166,16 @@ def clone(clone_url, local_destination):
                 'Unable to clone remote repository')
 
 
+def sync_local_with_remote(repo_path):
+    # TODO: Implement
+    pass
+
+
+def self_destruct_remote(repo_path):
+    # TODO: Implement
+    pass
+
+
 def add_metadata_to_repo(repo_path, key, value):
     """Sets the specified key to the specified value on the specified
     repository, adding it in the xeno section.
