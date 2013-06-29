@@ -1,3 +1,56 @@
+# System imports
+from sys import exit
+from os import makedirs
+from os.path import join, expanduser, exists, isdir
+
+# xeno imports
+from .configuration import get_configuration
+from .output import print_error
+
+
+def get_working_directory():
+    """Returns the working path for xeno.
+
+    This method returns a path to the xeno working directory, either loading
+    it from the configuration or using the default value of ~/.xeno.  This
+    method will create the directory if it doesn't exist, and if it is unable
+    to create the directory, it will print an error and exit.
+
+    Returns:
+        A string representing the path to the xeno working directory.
+    """
+    # Grab the xeno configuration
+    configuration = get_configuration()
+
+    # See if the user has specified the core.workingDirectory setting
+    path = None
+    if configuration.has_option('core', 'workingDirectory'):
+        path = configuration.get('core', 'workingDirectory')
+
+    # If there was no path in the configuration, use the default value
+    if path is None:
+        path = join(expanduser('~'), '.xeno')
+
+    # Check if the directory exists
+    if exists(path):
+        if isdir(path):
+            return path
+        else:
+            print_error('xeno working path exists and is not a directory')
+            exit(1)
+
+    # If it doesn't exist, try to create it
+    try:
+        makedirs(path)
+    except OSError, e:
+        print_error('Unable to create xeno working directory: {0}'.format(
+            str(e)
+        ))
+        exit(1)
+
+    return path
+
+
 class Path(object):
     """Reprents a (possibly remote) path specification.
 

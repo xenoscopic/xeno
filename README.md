@@ -55,7 +55,8 @@ configuration values, not just 'core.editor'.  The list of settings currently
 recognized by xeno include:
 
 - core.editor
-- core.clone_path
+- core.blockingEditor
+- core.workingDirectory
 
 To start editing a path, use
 

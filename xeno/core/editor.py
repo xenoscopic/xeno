@@ -4,7 +4,7 @@ from sys import exit
 
 # xeno imports
 from .output import print_error
-from .configuration import load_configuration
+from .configuration import get_configuration
 
 
 def launch_editor_on_local_path(local_path):
@@ -21,7 +21,7 @@ def launch_editor_on_local_path(local_path):
         This method does not return.
     """
     # Load configuration
-    configuration = load_configuration()
+    configuration = get_configuration()
 
     # Check if the user has specified an editor
     editor = None

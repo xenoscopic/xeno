@@ -5,7 +5,7 @@ import argparse
 
 # xeno imports
 from ..core.output import print_warning, print_error
-from ..core.configuration import configuration_file_path, load_configuration, \
+from ..core.configuration import configuration_file_path, get_configuration, \
     save_configuration
 
 
@@ -51,7 +51,7 @@ def main():
     args = parse_arguments()
 
     # Load the configuration
-    configuration = load_configuration()
+    configuration = get_configuration()
 
     # If the user has not specified a key, then print the current configuration
     if args.key is None:
@@ -101,7 +101,7 @@ def main():
                 # This will only fail if the section doesn't exist, in which
                 # case we can just consider it cleared anyway
                 pass
-            save_configuration(configuration)
+            save_configuration()
             exit(0)
 
         # Otherwise, print the value of the key
@@ -138,7 +138,7 @@ def main():
 
     # Write the specified value
     configuration.set(section, option, args.value)
-    save_configuration(configuration)
+    save_configuration()
 
     # All done
     exit(0)

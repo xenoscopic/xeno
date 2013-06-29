@@ -2,7 +2,7 @@
 import unittest
 
 # xeno imports
-from xeno.core.path import Path
+from xeno.core.paths import Path
 
 
 class TestPath(unittest.TestCase):
