@@ -13,15 +13,11 @@ import signal
 # xeno imports
 from ..core.output import print_warning, print_error
 from ..core.paths import get_working_directory
-
-
-# Temorary imports
-import time
+from ..core.editor import run_editor_on_local_path
 
 
 # Global variable to hold path the SSH monitoring FIFO
 _FIFO_PATH = None
-_FIFO_FILE = None
 
 
 # Method to create a FIFO
@@ -130,7 +126,11 @@ def main():
             # Suspend SSH
             ssh.send_signal(signal.SIGSTOP)
 
-            time.sleep(5)
+            # Launch our editor
+            run_editor_on_local_path('/Users/jacob/Projects/owls',
+                                        exit_on_no_editor=False)
+            
+            # Resume SSH
             ssh.send_signal(signal.SIGCONT)
 
     # Close the FIFO.  It'll be removed from disk automatically at exit

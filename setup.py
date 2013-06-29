@@ -18,6 +18,7 @@ setup(
             'xeno-config = xeno.commands.config:main',
             'xeno-edit = xeno.commands.edit:main',
             'xeno-ssh = xeno.commands.ssh:main',
+            'xeno-monitor = xeno.commands.monitor:main',
 
             # Convenience aliases for users to use as a replacement for their
             # normal editor command

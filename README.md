@@ -55,8 +55,9 @@ configuration values, not just 'core.editor'.  The list of settings currently
 recognized by xeno include:
 
 - core.editor
-- core.blockingEditor
 - core.workingDirectory
+- core.monitorSyncInterval
+- core.monitorQuitInterval
 
 To start editing a path, use
 

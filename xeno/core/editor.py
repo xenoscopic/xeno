@@ -1,5 +1,6 @@
 # System imports
 import os
+import subprocess
 from sys import exit
 
 # xeno imports
@@ -7,18 +8,21 @@ from .output import print_error
 from .configuration import get_configuration
 
 
-def launch_editor_on_local_path(local_path):
-    """Launches the user's editor on the specified local path, replacing the
-    current executable.
+def run_editor_on_local_path(local_path, exit_on_no_editor=True):
+    """Launches the user's editor on the specified local path and waits for it
+    to complete.
 
     If no editor can be identified from xeno settings or the EDITOR environment
     variables, prints an error and exits.
 
     Args:
         local_path: A string representing the local path to open.
+        exit_on_no_editor: Whether or not to exit if the editor cannot be
+            determined
 
     Returns:
-        This method does not return.
+        The exit status code of the editor, or if no editor could be
+        identified and exit_on_no_editor=False, returns None.
     """
     # Load configuration
     configuration = get_configuration()
@@ -37,7 +41,10 @@ def launch_editor_on_local_path(local_path):
         print_error('Unable to identify editor.  Either set the xeno '
                     '\'core.editor\' option or the \'EDITOR\' environment '
                     'variable.')
-        exit(1)
+        if exit_on_no_editor:
+            exit(1)
+        else:
+            return None
 
-    # Launch the editor, replacing the current process
-    os.execvp(editor, [editor, local_path])
+    # Launch the editor and wait for it to finish
+    return subprocess.call([editor, local_path])

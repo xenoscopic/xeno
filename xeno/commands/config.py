@@ -101,7 +101,7 @@ def main():
                 # This will only fail if the section doesn't exist, in which
                 # case we can just consider it cleared anyway
                 pass
-            save_configuration()
+            save_configuration(configuration)
             exit(0)
 
         # Otherwise, print the value of the key
@@ -138,7 +138,7 @@ def main():
 
     # Write the specified value
     configuration.set(section, option, args.value)
-    save_configuration()
+    save_configuration(configuration)
 
     # All done
     exit(0)
