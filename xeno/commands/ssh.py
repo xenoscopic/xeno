@@ -3,6 +3,7 @@ from __future__ import print_function
 
 # System imports
 import atexit
+import argparse
 import uuid
 import os
 import sys
@@ -14,6 +15,36 @@ import signal
 from ..core.output import print_warning, print_error
 from ..core.paths import get_working_directory
 from ..core.editor import run_editor_on_local_path
+from ..core.protocol import check_for_initialization_token
+from ..core.git import cloneable_remote_path
+
+
+def parse_arguments():
+    """Method to parse command line arguments.  For the case of SSH, we do this
+    only to be able to grab the port argument if it is passed to SSH.
+
+    This function will parse command line arguments using the argparse module.
+
+    Returns:
+        A namespace of the arguments.
+    """
+    # Set up the core parser
+    parser = argparse.ArgumentParser(add_help=False)
+
+    # Add arguments
+    parser.add_argument('-p',
+                        action='store',
+                        dest='port',
+                        nargs='?')
+    parser.add_argument('user_hostname',
+                        action='store',
+                        nargs='?')
+    parser.add_argument('command',
+                        action='store',
+                        nargs='?')
+
+    # Do the parsing of the arguments we want
+    return parser.parse_known_args()[0]
 
 
 # Global variable to hold path the SSH monitoring FIFO
@@ -81,7 +112,24 @@ def main():
     # Create the FIFO.  This method will exit on failure.
     fifo_path = create_fifo()
 
-    # TODO: Parse out the username, hostname, and port from the SSH arguments
+    # Parse out the username, hostname, and port from the SSH arguments.  Don't
+    # bother handling weird user_hostname cases, SSH will fail before it
+    # matters.
+    args = parse_arguments()
+    username = None
+    hostname = None
+    port = None
+    user_hostname_split = args.user_hostname.split('@')
+    if len(user_hostname_split) == 1:
+        hostname = user_hostname_split
+    elif len(user_hostname_split) == 2:
+        username, hostname = user_hostname_split
+    if args.port is not None:
+        try:
+            port = int(args.port)
+        except:
+            # Don't worry, if it's messed up, SSH will tell the user
+            pass
 
     # Create our subprocesses.  Launch SSH with its output piped to tee, and
     # have tee dump the output to our FIFO.
@@ -111,8 +159,10 @@ def main():
             str(e)
         ))
 
-    # Now read our FIFO until it runs out, looking for xeno invocations
-    while True:
+    # Now read our FIFO until it runs out, looking for xeno invocations.  We
+    # skip this if SSH is just executing a command.
+    is_not_command = args.command is None
+    while is_not_command:
         # Grab a new line
         line = fifo_file.readline()
 
@@ -121,22 +171,33 @@ def main():
             break
 
         # Check for our marker
-        clean_line = line.strip()
-        if clean_line == 'hello world':
+        remote_repo_path = check_for_initialization_token(line)
+        if remote_repo_path is not None:
             # Suspend SSH
             ssh.send_signal(signal.SIGSTOP)
 
+            # Compute the cloneable path
+            cloneable_path = cloneable_remote_path(username,
+                                                   hostname,
+                                                   port,
+                                                   remote_repo_path)
+
+            print(cloneable_path)
+
             # Launch our editor
-            run_editor_on_local_path('/Users/jacob/Projects/owls',
-                                        exit_on_no_editor=False)
+            #run_editor_on_local_path('/Users/jacob/Projects/owls',
+            #                            exit_on_no_editor=False)
             
             # Resume SSH
             ssh.send_signal(signal.SIGCONT)
 
+    # Wait for SSH and tee to finish, that way we don't get a broken pipe if
+    # we close the FIFO
+    result = ssh.wait()
+    tee.wait()
+
     # Close the FIFO.  It'll be removed from disk automatically at exit
     fifo_file.close()
 
-    # Wait for SSH to finish (it should have already) and exit with its return
-    # code
-    print('bailing')
-    exit(ssh.wait())
+    # All done, send back SSH's error code
+    exit(result)

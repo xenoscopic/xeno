@@ -2,12 +2,13 @@
 import os
 from sys import exit
 import argparse
+import subprocess
 
 # xeno imports
 from ..core.output import print_error
 from ..core.path import Path
 from ..core.editor import run_editor_on_local_path
-from ..core.git import initialize_remote_repository
+from ..core.git import initialize_remote_repository, cloneable_remote_path
 from ..core.protocol import create_initialization_token, \
     check_for_initialization_token
 
@@ -32,7 +33,7 @@ def parse_arguments():
                              'remote specification',
                         action='store',
                         nargs='?')
-    
+
     # Do the parsing
     args = parser.parse_args()
 
@@ -43,6 +44,59 @@ def parse_arguments():
 
     return args
 
+
+def remote_ssh_command_from_remote_path(remote_path):
+    """Remotely executes xeno-edit on the remote path and returns the
+    initialization token path or exits.
+
+    Args:
+        remote_path: The xeno.core.paths.Path object representing the remote
+            path
+
+    Returns:
+        The cloneable remote path (username/hostname included) on success,
+        exits on failure.
+    """
+    # Construct the command list
+    command_list = ['ssh']
+
+    # If there is a port, add the flag
+    if remote_path.port is not None:
+        command_list += ['-p', str(remote_path.port)]
+
+    # Add the username/hostname
+    if remote_path.username is not None:
+        command_list.append('{0}@{1}'.format(
+            remote_path.username,
+            remote_path.hostname
+        ))
+    else:
+        command_list.append(remote_path.hostname)
+
+    # Add the xeno edit command, escaping any spaces in the remote path
+    command_list.append('xeno-edit {0}'.format(
+        remote_path.file_path.replace(' ', '\\ ')
+    ))
+
+    # Execute the subprocess
+    try:
+        output = subprocess.check_output(command_list)
+    except subprocess.CalledProcessError:
+        print_error('Trying to initialize over SSH failed')
+        exit(1)
+
+    # Look for a token
+    remote_repo_path = check_for_initialization_token(output)
+    if remote_repo_path is None:
+        print_error('Unable to get initialization token')
+        exit(1)
+
+    # Compose it into a cloneable remote path
+    return cloneable_remote_path(remote_path.username,
+                                 remote_path.hostname,
+                                 remote_path.port,
+                                 remote_repo_path)
+    
 
 def main():
     """The edit subcommand handler.
@@ -81,7 +135,8 @@ def main():
     # Otherwise the path is remote, so we need to invoke SSH to the remote
     # destination and run the xeno-edit command there to get the clone-able
     # path
-    # TODO: Implement
+    cloneable_path = remote_ssh_command_from_remote_path(path)
+    print(cloneable_path)
 
     # All done
     exit(0)

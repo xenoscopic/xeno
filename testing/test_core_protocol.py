@@ -34,6 +34,13 @@ class TestProtocol(unittest.TestCase):
                          None)
         self.assertEqual(check_for_initialization_token(''),
                          None)
+        # This is the case that requires it be at the start of the string
+        self.assertEqual(
+            check_for_initialization_token(
+                ' <xeno-init>/Users/Jacob/repo</xeno-init>'
+            ),
+            None
+        )
 
 
 # Run the tests if this is the main module

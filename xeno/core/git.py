@@ -133,3 +133,23 @@ def initialize_remote_repository(path):
     # TODO: Install hooks
 
     return repo_path
+
+
+def cloneable_remote_path(username, hostname, port, repo_path):
+    """Constructs a cloneable Git URL capable of cloning the remote path.
+
+    Args:
+        username: The username to clone with or None
+        hostname: The hostname to clone from
+        port: The port to clone from or None
+        repo_path: The path of the repository on the remote
+
+    Returns:
+        A string representing the cloneable path.
+    """
+    return 'ssh://{0}{1}{2}/{3}'.format(
+        '{0}@'.format(username) if username else '',
+        hostname,
+        ':{0}'.format(port) if port else '',
+        repo_path
+    )
