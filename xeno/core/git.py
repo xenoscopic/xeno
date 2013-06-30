@@ -158,7 +158,7 @@ def initialize_remote_repository(path):
     hook_file_path = join(repo_path, 'hooks', 'post-receive')
     with open(hook_file_path, 'w') as hook_file:
         hook_file.write(post_receive_script)
-    os.chmod(hook_file_path, 0700)
+    os.chmod(hook_file_path, 0o700)
 
     return repo_path
 

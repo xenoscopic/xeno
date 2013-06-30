@@ -73,8 +73,8 @@ def create_fifo():
 
     # Try to make the FIFO, accessible only by the user
     try:
-        os.mkfifo(fifo_path, 0660)
-    except Exception, e:
+        os.mkfifo(fifo_path, 0o660)
+    except Exception as e:
         print_error('Unable to create FIFO at path \'{0}\': {1}'.format(
             fifo_path,
             str(e)
@@ -152,7 +152,7 @@ def main():
     # readline facility.
     try:
         fifo_file = open(fifo_path, 'r')
-    except Exception, e:
+    except Exception as e:
         # Kill the child processes
         ssh.kill()
         tee.kill()

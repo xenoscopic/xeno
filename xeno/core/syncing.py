@@ -1,6 +1,5 @@
 # System imports
 import subprocess
-from cStringIO import StringIO
 
 # xeno imports
 from xeno.core.output import print_error

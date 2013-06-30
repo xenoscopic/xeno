@@ -115,7 +115,7 @@ def main():
     repo_container = os.path.join(working_directory,
                                   'local-' + uuid.uuid4().hex)
     try:
-        os.makedirs(repo_container, 0700)
+        os.makedirs(repo_container, 0o700)
     except:
         print_error('Unable to create repository parent')
         exit(1)

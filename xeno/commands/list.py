@@ -2,7 +2,12 @@
 import sys
 import os
 import glob
-import urlparse
+try:
+    # Python 2.x
+    from urlparse import urlparse
+except ImportError:
+    # Python 3.x
+    from urllib.parse import urlparse
 
 # xeno imports
 from xeno.core.paths import get_working_directory
@@ -28,7 +33,7 @@ def main():
         clone_url = get_metadata_from_repo(repo, 'cloneUrl')
 
         # Parse the URL
-        clone_url = urlparse.urlparse(clone_url)
+        clone_url = urlparse(clone_url)
 
         # Check if the session is still alive
         # TODO: This is UNIX-specific

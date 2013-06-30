@@ -15,6 +15,7 @@ to every server you work on.
 
 Requirements
 ------------
+- POSIX-based operating system (I'll happily review pull requests for Windows)
 - Python 2.7+
 - Git
 - OpenSSH
@@ -22,7 +23,13 @@ Requirements
 
 Installation
 ------------
+The easiest (and only supported way) of installing xeno is using pip:
 
+    pip install git+https://github.com/havoc-io/xeno.git
+
+You also need to have pip's console_scripts install directory for both login AND
+non-login shells.  The former is pretty easy and likely on by default, the
+latter usually has to be done manually 
 
 
 Usage

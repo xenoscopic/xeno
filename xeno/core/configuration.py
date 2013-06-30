@@ -1,7 +1,12 @@
 # System imports
 from sys import exit
 from os.path import join, expanduser, exists, isfile
-from ConfigParser import SafeConfigParser
+try:
+    # Python 2.x
+    from ConfigParser import SafeConfigParser
+except ImportError:
+    # Python 3.x
+    from configparser import SafeConfigParser
 
 # xeno imports
 from xeno.core.output import print_warning, print_error
@@ -57,7 +62,7 @@ def get_configuration():
     # Try to read in any existing configuration
     try:
         configuration.read(config_file_path)
-    except Exception, e:
+    except Exception as e:
         print_error(
             'Unable to read configuration file ({0}): {1}'.format(
                 config_file_path,
@@ -87,7 +92,7 @@ def save_configuration(config):
     try:
         with open(config_file_path, 'w') as config_file:
             config.write(config_file)
-    except Exception, e:
+    except Exception as e:
         print_error(
             'Unable to save configuration to {0}: {1}'.format(
                 config_file_path,
