@@ -5,14 +5,14 @@ import argparse
 import subprocess
 
 # xeno imports
-from ..core.output import print_error
-from ..core.path import Path
-from ..core.editor import run_editor_on_local_path
-from ..core.git import initialize_remote_repository, cloneable_remote_path
-from ..core.protocol import create_initialization_token, \
+from xeno.core.output import print_error
+from xeno.core.paths import Path
+from xeno.core.editor import run_editor_on_local_path
+from xeno.core.git import initialize_remote_repository, cloneable_remote_path
+from xeno.core.protocol import create_initialization_token, \
     check_for_initialization_token, INITIALIZATION_KEY_IS_FILE, \
     INITIALIZATION_KEY_REMOTE_PATH, INITIALIZATION_KEY_REPOSITORY_PATH
-from ..core.syncing import start_syncing
+from xeno.core.syncing import start_syncing
 
 
 def parse_arguments():

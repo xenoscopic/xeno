@@ -4,8 +4,8 @@ from sys import exit
 import argparse
 
 # xeno imports
-from ..core.output import print_warning, print_error
-from ..core.configuration import configuration_file_path, get_configuration, \
+from xeno.core.output import print_warning, print_error
+from xeno.core.configuration import configuration_file_path, get_configuration, \
     save_configuration
 
 

@@ -4,8 +4,8 @@ import subprocess
 from sys import exit
 
 # xeno imports
-from .output import print_error
-from .configuration import get_configuration
+from xeno.core.output import print_error
+from xeno.core.configuration import get_configuration
 
 
 def run_editor_on_local_path(local_path, exit_on_no_editor=True):

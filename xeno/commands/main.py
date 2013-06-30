@@ -5,8 +5,8 @@ import os
 import argparse
 
 # xeno imports
-from ..version import XENO_VERSION, STRINGIFY_VERSION
-from ..core.output import print_error
+from xeno.version import XENO_VERSION, STRINGIFY_VERSION
+from xeno.core.output import print_error
 
 
 class HelpAction(argparse.Action):

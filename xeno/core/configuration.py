@@ -4,7 +4,7 @@ from os.path import join, expanduser, exists, isfile
 from ConfigParser import SafeConfigParser
 
 # xeno imports
-from .output import print_warning, print_error
+from xeno.core.output import print_warning, print_error
 
 
 def configuration_file_path(check=True):

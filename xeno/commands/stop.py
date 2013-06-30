@@ -7,9 +7,9 @@ import glob
 from os.path import join
 
 # xeno imports
-from ..core.output import print_error
-from ..core.paths import get_working_directory
-from ..core.git import get_metadata_from_repo
+from xeno.core.output import print_error
+from xeno.core.paths import get_working_directory
+from xeno.core.git import get_metadata_from_repo
 
 
 def parse_arguments():
@@ -29,7 +29,7 @@ def parse_arguments():
     # Add arguments
     parser.add_argument('session',
                         help='the session number to stop (the first column '
-                             'in \'xeno list\'',
+                             'in \'xeno list\')',
                         action='store',
                         nargs='?')
 

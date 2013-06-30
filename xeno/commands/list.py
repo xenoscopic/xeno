@@ -5,8 +5,8 @@ import glob
 import urlparse
 
 # xeno imports
-from ..core.paths import get_working_directory
-from ..core.git import get_metadata_from_repo
+from xeno.core.paths import get_working_directory
+from xeno.core.git import get_metadata_from_repo
 
 
 def main():

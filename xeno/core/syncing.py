@@ -3,7 +3,7 @@ import subprocess
 from cStringIO import StringIO
 
 # xeno imports
-from .output import print_error
+from xeno.core.output import print_error
 
 
 def start_syncing(remote_path_is_file, remote_path, cloneable_path):

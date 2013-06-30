@@ -4,8 +4,8 @@ from os import makedirs
 from os.path import join, expanduser, exists, isdir
 
 # xeno imports
-from .configuration import get_configuration
-from .output import print_error
+from xeno.core.configuration import get_configuration
+from xeno.core.output import print_error
 
 
 def get_working_directory():

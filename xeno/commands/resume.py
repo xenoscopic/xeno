@@ -6,11 +6,11 @@ import glob
 from os.path import join, basename
 
 # xeno imports
-from ..core.output import print_error
-from ..core.paths import get_working_directory
-from ..core.git import get_metadata_from_repo
-from ..core.editor import run_editor_on_local_path
-from ..core.configuration import string_to_bool
+from xeno.core.output import print_error
+from xeno.core.paths import get_working_directory
+from xeno.core.git import get_metadata_from_repo
+from xeno.core.editor import run_editor_on_local_path
+from xeno.core.configuration import string_to_bool
 
 
 def parse_arguments():
@@ -30,7 +30,7 @@ def parse_arguments():
     # Add arguments
     parser.add_argument('session',
                         help='the session number to resume (the first column '
-                             'in \'xeno list\'',
+                             'in \'xeno list\')',
                         action='store',
                         nargs='?')
 

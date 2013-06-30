@@ -11,9 +11,9 @@ from shutil import rmtree
 from pkg_resources import resource_string
 
 # xeno imports
-from .output import print_error
-from .paths import get_working_directory
-from .configuration import get_configuration
+from xeno.core.output import print_error
+from xeno.core.paths import get_working_directory
+from xeno.core.configuration import get_configuration
 
 
 def _check_call(command_list, error_message, cwd=None, error_cleanup=None):

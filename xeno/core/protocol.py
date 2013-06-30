@@ -5,7 +5,7 @@ import json
 import base64
 
 # xeno imports
-from ..version import XENO_VERSION, STRINGIFY_VERSION
+from xeno.version import XENO_VERSION, STRINGIFY_VERSION
 
 
 # Compile the token recognition regex.  We use non-greedy matching to avoid
