@@ -182,7 +182,7 @@ def clone(clone_url, local_destination):
                 'Unable to clone remote repository')
 
 
-def sync_local_with_remote(repo_path, poll_for_remote_changes):
+def sync_local_with_remote(repo_path, poll_for_remote_changes, remote_is_file):
     """Commits all local changes, pushes them to the remote branch, and pulls
     down any new changes.
 
@@ -192,20 +192,28 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes):
     Args:
         repo_path: The path of the repository to sync
         poll_for_remote_changes: If False, this method will only initiate a
-            push/pull when there are local changes.
+            push/pull when there are local changes
+        remote_is_file: Whether or not the remote is a single file
 
     Returns:
         True on success, False on error.
     """
     # Check if we need to do a push
     try:
-        do_push = subprocess.check_output(['git',
-                                           'ls-files',
-                                           '--modified',
-                                           '--deleted',
-                                           '--other',
-                                           '--exclude-standard'],
-                                          cwd=repo_path) != ''
+        if remote_is_file:
+            do_push = subprocess.check_output(['git',
+                                               'ls-files',
+                                               '--modified',
+                                               '--exclude-standard'],
+                                              cwd=repo_path) != ''
+        else:
+            do_push = subprocess.check_output(['git',
+                                               'ls-files',
+                                               '--modified',
+                                               '--deleted',
+                                               '--other',
+                                               '--exclude-standard'],
+                                              cwd=repo_path) != ''
     except:
         print_error('Unable to determine local repository status')
         return False
@@ -216,12 +224,13 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes):
     # Create the local commit if necessary
     if do_push:
         try:
-            # Add untracked files
-            subprocess.check_call(['git',
-                                   'add',
-                                   '-A',
-                                   join(repo_path, '*')],
-                                  cwd=repo_path)
+            # Add untracked files if not editing a single file
+            if not remote_is_file:
+                subprocess.check_call(['git',
+                                       'add',
+                                       '-A',
+                                       join(repo_path, '*')],
+                                      cwd=repo_path)
 
             # Commit
             subprocess.check_call(['git',

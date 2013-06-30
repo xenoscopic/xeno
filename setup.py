@@ -31,7 +31,6 @@ setup(
             'xen = xeno.commands.edit:main'
         ],
     },
-    install_requires=['watchdog>=0.6.0'],
 
     # Metadata for PyPI
     author='Jacob Howard',

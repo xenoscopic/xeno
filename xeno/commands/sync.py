@@ -137,12 +137,15 @@ def main():
     add_metadata_to_repo(repo_path, 'remotePath', remote_path)
     add_metadata_to_repo(repo_path, 'cloneUrl', clone_url)
 
-    # Print the repo path.
+    # Print the editable path.
     # HACK: We have to flush, because the daemon process will inherit the same
     # file descriptors and since they are never closed, this line may remain
     # buffered indefinitely, causing anyone waiting for the output to wait
     # for-ev-er.
-    print(repo_path)
+    if remote_is_file:
+        print(os.path.join(repo_path, os.path.basename(remote_path)))
+    else:
+        print(repo_path)
     sys.stdout.flush()
 
     # Daemonize (unless told not to)
@@ -192,7 +195,7 @@ def main():
     # Enter our main loop
     while True:
         # Do the sync
-        sync_local_with_remote(repo_path, poll_remote)
+        sync_local_with_remote(repo_path, poll_remote, remote_is_file)
 
         # Sleep
         time.sleep(sync_interval)

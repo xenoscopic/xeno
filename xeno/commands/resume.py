@@ -3,13 +3,14 @@ from sys import exit
 import os
 import argparse
 import glob
-from os.path import join
+from os.path import join, basename
 
 # xeno imports
 from ..core.output import print_error
 from ..core.paths import get_working_directory
 from ..core.git import get_metadata_from_repo
 from ..core.editor import run_editor_on_local_path
+from ..core.configuration import string_to_bool
 
 
 def parse_arguments():
@@ -82,7 +83,24 @@ def main():
         # Check if it matches
         if args.session == process_id:
             # Found it!
-            exit(run_editor_on_local_path(repo))
+
+            # Check if it is a single file
+            remote_is_file = string_to_bool(get_metadata_from_repo(
+                repo,
+                'remoteIsFile'
+            ))
+
+            # Calculate the editor path
+            if remote_is_file:
+                edit_path = join(repo, basename(get_metadata_from_repo(
+                    repo,
+                    'remotePath'
+                )))
+            else:
+                edit_path = repo
+
+            # Found it!
+            exit(run_editor_on_local_path(edit_path))
 
     # Couldn't find a match
     print_error('Couldn\'t find specified session: {0}'.format(
