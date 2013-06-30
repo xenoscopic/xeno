@@ -182,7 +182,10 @@ def clone(clone_url, local_destination):
                 'Unable to clone remote repository')
 
 
-def sync_local_with_remote(repo_path, poll_for_remote_changes, remote_is_file):
+def sync_local_with_remote(repo_path,
+                           poll_for_remote_changes,
+                           remote_is_file,
+                           override_push_local):
     """Commits all local changes, pushes them to the remote branch, and pulls
     down any new changes.
 
@@ -194,6 +197,12 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes, remote_is_file):
         poll_for_remote_changes: If False, this method will only initiate a
             push/pull when there are local changes
         remote_is_file: Whether or not the remote is a single file
+        override_push_local: Normally the local is only pushed if local changes
+            are committed, but if the last push failed (e.g. due to being
+            offline) then the committed changes won't be sent until new ones
+            are detected locally, which isn't really ideal.  Set this value to
+            True if sync_local_with_remote returns False to make sure the
+            commits are pushed when next possible.
 
     Returns:
         True on success, False on error.
@@ -244,6 +253,13 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes, remote_is_file):
                                    '--allow-empty-message',
                                    '--allow-empty'],
                                   cwd=repo_path)
+        except:
+            print_error('Unable to commit local changes')
+            return False
+
+    # Push the local branch if necessary
+    if do_push or override_push_local:
+        try:
             subprocess.check_call(['git',
                                    'push',
                                    '--quiet',
@@ -258,6 +274,8 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes, remote_is_file):
     # commit to tell the remote
     if do_pull:
         try:
+            # TODO: Can we detect if we pushed changes?  If we did, then we
+            # don't need this secondary query.
             subprocess.call(['git',
                              'commit',
                              '--quiet',

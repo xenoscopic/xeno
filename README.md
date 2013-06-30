@@ -17,10 +17,10 @@ copy.  Or, if you are already in an SSH session<sup>1</sup>, you can do
 
 and it will have exactly the same effect!
 
-<sub><sup>
+<sup>
 1: For in-session launches, you must use `xeno ssh`, a VERY thin wrapper around
 SSH which monitors console output for initialization messages
-</sup></sub>
+</sup>
 
 
 How Does it Work?
@@ -153,3 +153,4 @@ TODO List
 - Replace local polling with `watchdog` or a similar file-monitoring library
 - Add exclude/include options to `xeno edit`
 - Cross-platform support
+- Fix all code TODOs and HACKs
