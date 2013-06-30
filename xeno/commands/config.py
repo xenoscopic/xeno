@@ -5,8 +5,8 @@ import argparse
 
 # xeno imports
 from xeno.core.output import print_warning, print_error
-from xeno.core.configuration import configuration_file_path, get_configuration, \
-    save_configuration
+from xeno.core.configuration import configuration_file_path, \
+    get_configuration, save_configuration
 
 
 def parse_arguments():

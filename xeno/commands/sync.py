@@ -12,8 +12,8 @@ import time
 from xeno.core.output import print_error
 from xeno.core.configuration import get_configuration, string_to_bool
 from xeno.core.paths import get_working_directory
-from xeno.core.git import clone, add_metadata_to_repo, sync_local_with_remote, \
-    self_destruct_remote
+from xeno.core.git import clone, add_metadata_to_repo, \
+    sync_local_with_remote, self_destruct_remote
 
 
 def parse_arguments():
