@@ -22,12 +22,16 @@ setup(
             'xeno-edit = xeno.commands.edit:main',
             'xeno-ssh = xeno.commands.ssh:main',
             'xeno-sync = xeno.commands.sync:main',
+            'xeno-list = xeno.commands.list:main',
+            'xeno-resume = xeno.commands.resume:main',
+            'xeno-stop = xeno.commands.stop:main',
 
             # Convenience aliases for users to use as a replacement for their
             # normal editor command
             'xen = xeno.commands.edit:main'
         ],
     },
+    install_requires=['watchdog>=0.6.0'],
 
     # Metadata for PyPI
     author='Jacob Howard',

@@ -149,7 +149,9 @@ def main():
     if not args.no_daemon:
         daemonize()
 
-    # We are the daemon (or the original process if we didn't daemonize)
+    # We are the daemon (or the original process if we didn't daemonize).  Add
+    # our process id to the remote metadata
+    add_metadata_to_repo(repo_path, 'syncProcessId', str(os.getpid()))
 
     # Create a cleanup method
     def cleanup():

@@ -100,8 +100,8 @@ def main():
 
     This method handles the 'edit' subcommand by starting an editing session.
     """
-    # Parse arguments.  If not path or remote is specified, this will print
-    # help and exit.
+    # Parse arguments.  If no path or remote is specified, this will print help
+    # and exit.
     args = parse_arguments()
 
     # Parse the path or remote
