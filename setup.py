@@ -13,18 +13,18 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'xeno = xeno.xeno.commands.main:main',
-            'xeno-config = xeno.xeno.commands.config:main',
-            'xeno-edit = xeno.xeno.commands.edit:main',
-            'xeno-ssh = xeno.xeno.commands.ssh:main',
-            'xeno-sync = xeno.xeno.commands.sync:main',
-            'xeno-list = xeno.xeno.commands.list:main',
-            'xeno-resume = xeno.xeno.commands.resume:main',
-            'xeno-stop = xeno.xeno.commands.stop:main',
+            'xeno = xeno.commands.main:main',
+            'xeno-config = xeno.commands.config:main',
+            'xeno-edit = xeno.commands.edit:main',
+            'xeno-ssh = xeno.commands.ssh:main',
+            'xeno-sync = xeno.commands.sync:main',
+            'xeno-list = xeno.commands.list:main',
+            'xeno-resume = xeno.commands.resume:main',
+            'xeno-stop = xeno.commands.stop:main',
 
             # Convenience aliases for users to use as a replacement for their
             # normal editor command
-            'xen = xeno.xeno.commands.edit:main'
+            'xen = xeno.commands.edit:main'
         ],
     },
 
