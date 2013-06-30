@@ -122,11 +122,12 @@ def main():
     username = None
     hostname = None
     port = None
-    user_hostname_split = args.user_hostname.split('@')
-    if len(user_hostname_split) == 1:
-        hostname = user_hostname_split
-    elif len(user_hostname_split) == 2:
-        username, hostname = user_hostname_split
+    if args.user_hostname is not None:
+        user_hostname_split = args.user_hostname.split('@')
+        if len(user_hostname_split) == 1:
+            hostname = user_hostname_split
+        elif len(user_hostname_split) == 2:
+            username, hostname = user_hostname_split
     if args.port is not None:
         try:
             port = int(args.port)
