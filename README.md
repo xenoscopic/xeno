@@ -11,14 +11,14 @@ To start editing a remote path over SSH, use
     xen user@hostname:/the/path
 
 xeno will clone the remote path locally and keep it in sync with the remote
-copy.  Or, if you are already in an SSH session*, you can do
+copy.  Or, if you are already in an SSH session<sup>1</sup>, you can do
 
     xen /the/path
 
 and it will have exactly the same effect!
 
 <sub><sup>
-* For in-session launches, you must use `xeno ssh`, a VERY thin wrapper around
+1: For in-session launches, you must use `xeno ssh`, a VERY thin wrapper around
 SSH which monitors console output for initialization messages
 </sup></sub>
 
