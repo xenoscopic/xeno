@@ -1,7 +1,3 @@
-# Use the distribute version of setuptools
-from distribute_setup import use_setuptools
-use_setuptools()
-
 # Setuptools imports
 from setuptools import setup
 
