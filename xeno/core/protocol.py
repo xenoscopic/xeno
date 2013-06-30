@@ -10,7 +10,7 @@ from ..version import XENO_VERSION, STRINGIFY_VERSION
 
 # Compile the token recognition regex.  We use non-greedy matching to avoid
 # matching multiple initializations in case they somehow arrive.
-_TOKEN_REGEX = re.compile('\A<xeno-init>(.*?)</xeno-init>')
+_TOKEN_REGEX = re.compile('\A<xeno-initialize>(.*?)</xeno-initialize>')
 
 
 # Required keys for the initialization dictionary (they must be strings,
@@ -47,7 +47,7 @@ def create_initialization_token(path, repo_path):
     # every 76 characters)
     b = ''.join(base64.encodestring(j).strip().split('\n'))
 
-    return '<xeno-init>{0}</xeno-init>'.format(b)
+    return '<xeno-initialize>{0}</xeno-initialize>'.format(b)
 
 
 def check_for_initialization_token(text):

@@ -12,6 +12,9 @@ setup(
     name='xeno',
     version='0.0.1',
     packages=['xeno'],
+    package_data={
+        'xeno': ['hooks/post-receive']
+    },
     entry_points={
         'console_scripts': [
             'xeno = xeno.commands.main:main',

@@ -51,6 +51,9 @@ def get_configuration():
     # Create a configuration parser
     configuration = SafeConfigParser()
 
+    # Make it case-sensitive
+    configuration.optionxform = str
+
     # Try to read in any existing configuration
     try:
         configuration.read(config_file_path)
@@ -92,3 +95,16 @@ def save_configuration(config):
             )
         )
         exit(1)
+
+
+def string_to_bool(s):
+    """Converts a string value to a boolean value based on the content of the
+    string.
+
+    Args:
+        s: The string to convert
+
+    Returns:
+        A True or False value
+    """
+    return s.lower() in ['true', '1', 'y', 'yes']

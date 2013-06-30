@@ -10,7 +10,7 @@ import time
 
 # xeno imports
 from ..core.output import print_error
-from ..core.configuration import get_configuration
+from ..core.configuration import get_configuration, string_to_bool
 from ..core.paths import get_working_directory
 from ..core.git import clone, add_metadata_to_repo, sync_local_with_remote, \
     self_destruct_remote
@@ -51,6 +51,10 @@ def parse_arguments():
                         required=True,
                         help='the Git clone URL',
                         dest='clone_url')
+    parser.add_argument('--no-daemon',
+                        action='store_true',
+                        help='do not daemonize (for debugging)',
+                        dest='no_daemon')
 
     # Do the parsing
     return parser.parse_args()
@@ -76,18 +80,15 @@ def daemonize():
     os.setsid()
     os.umask(0)
 
-    # Flush the original parent output
-    sys.stdin.flush()
-    sys.stdout.flush()
-    sys.stderr.flush()
-
     # Do the second fork
     if os.fork() > 0:
         # This is the intermediate, exit calmly
         # Recommended exit method on fork()
         os._exit(0)
 
-    # Otherwise, we're in the second child, keep going...
+    # Otherwise, we're in the second child, set our outputs and keep going...
+    sys.stdout = open(os.devnull, 'w')
+    sys.stderr = open(os.devnull, 'w')
 
 
 def main():
@@ -136,13 +137,19 @@ def main():
     add_metadata_to_repo(repo_path, 'remotePath', remote_path)
     add_metadata_to_repo(repo_path, 'cloneUrl', clone_url)
 
-    # Print the repo path
+    # Print the repo path.
+    # HACK: We have to flush, because the daemon process will inherit the same
+    # file descriptors and since they are never closed, this line may remain
+    # buffered indefinitely, causing anyone waiting for the output to wait
+    # for-ev-er.
     print(repo_path)
+    sys.stdout.flush()
 
-    # Daemonize
-    daemonize()
+    # Daemonize (unless told not to)
+    if not args.no_daemon:
+        daemonize()
 
-    # We are the daemon!
+    # We are the daemon (or the original process if we didn't daemonize)
 
     # Create a cleanup method
     def cleanup():
@@ -158,23 +165,35 @@ def main():
         cleanup()
         exit(0)
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # Calculate our sync interval
     sync_interval = 10
-    if configuration.has_option('core', 'syncInterval'):
+    if configuration.has_option('sync', 'syncInterval'):
         try:
-            sync_interval = int(configuration.get('core', 'syncInterval'))
+            sync_interval = int(configuration.get('sync', 'syncInterval'))
         except:
             # Just go with the default interval
+            pass
+
+    # Calculate whether or not to poll the remote
+    poll_remote = False
+    if configuration.has_option('sync', 'pollForRemoteChanges'):
+        try:
+            poll_remote = string_to_bool(
+                configuration.get('sync', 'pollForRemoteChanges')
+            )
+        except:
+            # Invalid value...
             pass
 
     # Enter our main loop
     while True:
         # Do the sync
-        sync_local_with_remote(repo_path)
+        sync_local_with_remote(repo_path, poll_remote)
 
         # Sleep
         time.sleep(sync_interval)
 
-    # All done
+    # All done (unreachable code, but whatever)
     exit(0)

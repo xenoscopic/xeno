@@ -47,7 +47,7 @@ class TestProtocol(unittest.TestCase):
         # This is the case that requires it be at the start of the string
         self.assertEqual(
             check_for_initialization_token(
-                ' <xeno-init>abcd</xeno-init>'
+                ' <xeno-initialize>abcd</xeno-initialize>'
             ),
             None
         )

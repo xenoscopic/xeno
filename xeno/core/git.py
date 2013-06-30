@@ -1,14 +1,19 @@
 # System imports
 from sys import exit
+import os
 from os.path import expanduser, exists, isfile, join, dirname, basename, \
     normpath, realpath, relpath
 import subprocess
 import uuid
 from shutil import rmtree
 
+# Setuptools imports
+from pkg_resources import resource_string
+
 # xeno imports
 from .output import print_error
 from .paths import get_working_directory
+from .configuration import get_configuration
 
 
 def _check_call(command_list, error_message, cwd=None, error_cleanup=None):
@@ -143,7 +148,14 @@ def initialize_remote_repository(path):
                 cwd=repo_path,
                 error_cleanup=error_cleanup)
 
-    # TODO: Install hooks
+    # Install hooks.  Note that it is required to use forward-slashes in the
+    # pkg_resources API, and they will automatically be translated
+    # appropriately on any platform
+    post_receive_script = resource_string('xeno', 'hooks/post-receive')
+    hook_file_path = join(repo_path, 'hooks', 'post-receive')
+    with open(hook_file_path, 'w') as hook_file:
+        hook_file.write(post_receive_script)
+    os.chmod(hook_file_path, 0700)
 
     return repo_path
 
@@ -166,14 +178,124 @@ def clone(clone_url, local_destination):
                 'Unable to clone remote repository')
 
 
-def sync_local_with_remote(repo_path):
-    # TODO: Implement
-    pass
+def sync_local_with_remote(repo_path, poll_for_remote_changes):
+    """Commits all local changes, pushes them to the remote branch, and pulls
+    down any new changes.
+
+    In all cases where there are conflicts, the local always take precedence
+    over the remote.
+
+    Args:
+        repo_path: The path of the repository to sync
+        poll_for_remote_changes: If False, this method will only initiate a
+            push/pull when there are local changes.
+
+    Returns:
+        True on success, False on error.
+    """
+    # Check if we need to do a push
+    try:
+        do_push = subprocess.check_output(['git',
+                                           'ls-files',
+                                           '--modified',
+                                           '--deleted',
+                                           '--other',
+                                           '--exclude-standard'],
+                                          cwd=repo_path) != ''
+    except:
+        print_error('Unable to determine local repository status')
+        return False
+
+    # Check if we need to do a pull
+    do_pull = True if poll_for_remote_changes else do_push
+
+    # Create the local commit if necessary
+    if do_push:
+        try:
+            subprocess.check_call(['git',
+                                   'add',
+                                   '-A',
+                                   join(repo_path, '*')],
+                                  cwd=repo_path)
+            subprocess.check_call(['git',
+                                   'commit',
+                                   '--author',
+                                   '"xeno <xeno@xeno>"',
+                                   '-m',
+                                   '"xeno-local-commit"',
+                                   '--allow-empty-message',
+                                   '--allow-empty'],
+                                  cwd=repo_path)
+            subprocess.check_call(['git',
+                                   'push',
+                                   'origin',
+                                   'master:incoming'],
+                                  cwd=repo_path)
+        except:
+            print_error('Unable to push local changes to remote')
+            return False
+
+    # Pull down changes if necessary.  First though, we have to do a query
+    # commit to tell the remote
+    if do_pull:
+        try:
+            subprocess.call(['git',
+                             'commit',
+                             '--author',
+                             '"xeno <xeno@xeno>"',
+                             '-m',
+                             '"xeno-query"',
+                             '--allow-empty'],
+                            cwd=repo_path)
+            subprocess.check_call(['git',
+                                   'push',
+                                   'origin',
+                                   'master:incoming'],
+                                  cwd=repo_path)
+            subprocess.check_call(['git',
+                                   'pull',
+                                   '--commit',
+                                   '--no-edit',
+                                   '--strategy',
+                                   'recursive',
+                                   '-X',
+                                   'ours'],
+                                  cwd=repo_path)
+        except:
+            print_error('Unable to pull remote changes')
+            return False
+
+    # All done
+    return True
 
 
 def self_destruct_remote(repo_path):
-    # TODO: Implement
-    pass
+    """This method creates a self-destruct commit message and pushes it to the
+    remote end.
+
+    On the remote end, only the bare repository is deleted - the working tree
+    is left untouched.
+
+    Args:
+        repo_path: The path to the repository
+    """
+    try:
+        subprocess.call(['git',
+                         'commit',
+                         '--author',
+                         '"xeno <xeno@xeno>"',
+                         '-m',
+                         '"xeno-destruct"',
+                         '--allow-empty'],
+                        cwd=repo_path)
+        subprocess.check_call(['git',
+                               'push',
+                               'origin',
+                               'master:incoming'],
+                              cwd=repo_path)
+    except:
+        # Oh well, we did our best..., just let it pass but print a message
+        print_error('Unable to self-destruct remote repository')
 
 
 def add_metadata_to_repo(repo_path, key, value):

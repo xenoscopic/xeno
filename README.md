@@ -56,7 +56,8 @@ recognized by xeno include:
 
 - core.editor
 - core.workingDirectory
-- core.syncInterval
+- sync.syncInterval
+- sync.pollForRemoteChanges
 
 To start editing a path, use
 

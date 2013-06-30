@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Merge the 'incoming' branch into 'master' using the 'incoming' branch
+# as canonical during conflicts
+git merge incoming --commit --no-edit -m "xeno-remote-merge" --strategy=recursive -X theirs
+
+# Look for any self-destruct messages
+if [ -n "`git log --grep xeno-destruct`" ]; then
+    # If we find them, remove the repository.
+    # TODO: I'd feel better if there were a more reliable way to grab the repo
+    # path, but the working directory of the hook should always be the repo
+    # directory, so this should be okay.
+    XENO_REPO=`pwd`
+    rm -rf $XENO_REPO
+    exit
+fi
+
+# Do a commit of any local changes we have pending
+if [ -n "`git ls-files --modified --deleted --other --exclude-standard`" ]; then
+    # HACK: Not sure if we have to specify the worktree here, but from the Git
+    # add documentation, it isn't clear to me.  In any case, this won't hurt
+    # anything.
+    git add -A `git config core.worktree`/*
+    git commit --author "xeno <xeno@xeno>" -m "xeno-remote-commit" --no-edit --allow-empty-message --allow-empty
+fi
