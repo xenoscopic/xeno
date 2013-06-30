@@ -2,7 +2,7 @@
 
 # Merge the 'incoming' branch into 'master' using the 'incoming' branch
 # as canonical during conflicts
-git merge incoming --commit --no-edit -m "xeno-remote-merge" --strategy=recursive -X theirs
+git merge incoming --quiet --commit --no-edit -m "xeno-remote-merge" --strategy=recursive -X theirs
 
 # Look for any self-destruct messages
 if [ -n "`git log --grep xeno-destruct`" ]; then
@@ -17,9 +17,12 @@ fi
 
 # Do a commit of any local changes we have pending
 if [ -n "`git ls-files --modified --deleted --other --exclude-standard`" ]; then
-    # HACK: Not sure if we have to specify the worktree here, but from the Git
-    # add documentation, it isn't clear to me.  In any case, this won't hurt
-    # anything.
-    git add -A `git config core.worktree`/*
-    git commit --author "xeno <xeno@xeno>" -m "xeno-remote-commit" --no-edit --allow-empty-message --allow-empty
+    # Add any untracked files
+    if [ -n "`git ls-files --other --exclude-standard`" ]; then
+        # HACK: Not sure if we have to specify the worktree here, but from the Git
+        # add documentation, it isn't clear to me.  In any case, this won't hurt
+        # anything.
+        git add -A `git config core.worktree`/*
+    fi
+    git commit --quiet -a --author "xeno <xeno@xeno>" -m "xeno-remote-commit" --no-edit --allow-empty-message --allow-empty
 fi

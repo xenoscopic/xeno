@@ -85,13 +85,14 @@ def initialize_remote_repository(path):
     # and we will only include the file.
     work_path = dirname(path) if is_file else path
 
-    # Do the initialization
+    # Do the initialization (--quiet has to come after init here)
     _check_call(['git',
                  '--work-tree',
                  work_path,
                  '--git-dir',
                  repo_path,
-                 'init'],
+                 'init',
+                 '--quiet'],
                 'Unable to initialize remote Git repository')
 
     # Create a cleanup in case anything fails
@@ -131,6 +132,7 @@ def initialize_remote_repository(path):
     # Add all files and do the initial commit
     _check_call(['git',
                  'commit',
+                 '--quiet',
                  '--author',
                  '"xeno <xeno@xeno>"',
                  '-m',
@@ -143,6 +145,7 @@ def initialize_remote_repository(path):
     # Create an incoming branch
     _check_call(['git',
                  'branch',
+                 '--quiet',
                  'incoming'],
                 'Unable to create incoming branch',
                 cwd=repo_path,
@@ -173,6 +176,7 @@ def clone(clone_url, local_destination):
     # Do the clone
     _check_call(['git',
                  'clone',
+                 '--quiet',
                  clone_url,
                  local_destination],
                 'Unable to clone remote repository')
@@ -212,13 +216,18 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes):
     # Create the local commit if necessary
     if do_push:
         try:
+            # Add untracked files
             subprocess.check_call(['git',
                                    'add',
                                    '-A',
                                    join(repo_path, '*')],
                                   cwd=repo_path)
+
+            # Commit
             subprocess.check_call(['git',
                                    'commit',
+                                   '--quiet',
+                                   '-a',
                                    '--author',
                                    '"xeno <xeno@xeno>"',
                                    '-m',
@@ -228,6 +237,7 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes):
                                   cwd=repo_path)
             subprocess.check_call(['git',
                                    'push',
+                                   '--quiet',
                                    'origin',
                                    'master:incoming'],
                                   cwd=repo_path)
@@ -241,6 +251,7 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes):
         try:
             subprocess.call(['git',
                              'commit',
+                             '--quiet',
                              '--author',
                              '"xeno <xeno@xeno>"',
                              '-m',
@@ -249,11 +260,13 @@ def sync_local_with_remote(repo_path, poll_for_remote_changes):
                             cwd=repo_path)
             subprocess.check_call(['git',
                                    'push',
+                                   '--quiet',
                                    'origin',
                                    'master:incoming'],
                                   cwd=repo_path)
             subprocess.check_call(['git',
                                    'pull',
+                                   '--quiet',
                                    '--commit',
                                    '--no-edit',
                                    '--strategy',
@@ -280,19 +293,28 @@ def self_destruct_remote(repo_path):
         repo_path: The path to the repository
     """
     try:
+        # Create the destructive commit
         subprocess.call(['git',
                          'commit',
+                         '--quiet',
                          '--author',
                          '"xeno <xeno@xeno>"',
                          '-m',
                          '"xeno-destruct"',
                          '--allow-empty'],
                         cwd=repo_path)
-        subprocess.check_call(['git',
-                               'push',
-                               'origin',
-                               'master:incoming'],
-                              cwd=repo_path)
+
+        # Push it to the remote, ignoring all output because the remote will
+        # spit back a fatal error
+        with open(os.devnull, 'w') as devnull_output:
+            subprocess.check_call(['git',
+                                   'push',
+                                   '--quiet',
+                                   'origin',
+                                   'master:incoming'],
+                                  cwd=repo_path,
+                                  stdout=devnull_output,
+                                  stderr=devnull_output)
     except:
         # Oh well, we did our best..., just let it pass but print a message
         print_error('Unable to self-destruct remote repository')
