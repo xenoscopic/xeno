@@ -4,7 +4,7 @@ import os
 from os.path import expanduser, exists, isfile, join, dirname, basename, \
     normpath, realpath, relpath
 import subprocess
-from subprocess import Popen, check_call, check_output
+from subprocess import check_call, check_output
 import uuid
 from shutil import rmtree
 
@@ -15,40 +15,6 @@ from pkg_resources import resource_string
 from xeno.core.output import print_error
 from xeno.core.paths import get_working_directory
 from xeno.core.configuration import get_configuration
-
-
-def _check_call(command_list, error_message, cwd=None, error_cleanup=None):
-    """This method is a convenience wrapper for the Popen method, allowing one
-    to call a subprocess and check its output, displaying an error message and
-    exiting if the subprocess does not complete successfully.
-
-    Args:
-        command_list: The command and arguments to pass to Popen
-        error_message: The message to print if there is an error.  It will be
-            suffixed with the stdout/stderr of the subprocess.
-        error_cleanup: A callable with no arguments that will be called on
-            failure
-    """
-    # Start the subprocess
-    p = subprocess.Popen(command_list,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         cwd=cwd)
-
-    # Wait for completion
-    result = p.wait()
-
-    # Check the result
-    if result != 0:
-        # If it's no good, print an error message
-        print_error(error_message + ': ' + p.stdout.read())
-
-        # Do the cleanup, if any
-        if error_cleanup is not None:
-            error_cleanup()
-
-        # Bail
-        exit(1)
 
 
 def initialize_remote_repository(path):
@@ -87,17 +53,20 @@ def initialize_remote_repository(path):
     work_path = dirname(path) if is_file else path
 
     # Do the initialization (--quiet has to come after init here)
-    _check_call(['git',
-                 '--work-tree',
-                 work_path,
-                 '--git-dir',
-                 repo_path,
-                 'init',
-                 '--quiet'],
-                'Unable to initialize remote Git repository')
-
-    # Create a cleanup in case anything fails
-    error_cleanup = lambda: rmtree(repo_path)
+    with open(os.devnull, 'w') as null_output:
+        try:
+            check_call(['git',
+                        '--work-tree',
+                        work_path,
+                        '--git-dir',
+                        repo_path,
+                        'init',
+                        '--quiet'],
+                       stdout=null_output,
+                       stderr=null_output)
+        except:
+            print_error('Unable to initialize remote repository')
+            exit(1)
 
     # Set up excludes
     with open(join(repo_path, 'info', 'exclude'), 'a') as exclude_file:
@@ -122,34 +91,25 @@ def initialize_remote_repository(path):
     # expression for the pathspec due to how git behaves when the work tree is
     # above the repo directory.  In any case, I think git will always ignore
     # the repo directory.
-    _check_call(['git',
-                 'add',
-                 '-A',
-                 join(work_path, '*')],
-                'Unable to add initial files',
-                cwd=repo_path,
-                error_cleanup=error_cleanup)
-
-    # Add all files and do the initial commit
-    _check_call(['git',
-                 'commit',
-                 '--quiet',
-                 '--author',
-                 '"xeno <xeno@xeno>"',
-                 '-m',
-                 '"xeno-commit"'],
-                'Unable to commit initial files',
-                cwd=repo_path,
-                error_cleanup=error_cleanup)
+    if not commit(repo_path,
+                  commit_modified=False,
+                  commit_created=True,
+                  commit_deleted=False):
+        print_error('Unable to add initial commit to remote repository')
+        rmtree(repo_path)
+        exit(1)
 
     # Create an incoming branch
-    _check_call(['git',
-                 'branch',
-                 '--quiet',
-                 'incoming'],
-                'Unable to create incoming branch',
-                cwd=repo_path,
-                error_cleanup=error_cleanup)
+    with open(os.devnull, 'w') as null_output:
+        try:
+            check_call(['git',
+                        'branch',
+                        'incoming'],
+                       cwd=repo_path)
+        except:
+            print_error('Unable to add incoming branch to remote repository')
+            rmtree(repo_path)
+            exit(1)
 
     # Install hooks.  Note that it is required to use forward-slashes in the
     # pkg_resources API, and they will automatically be translated
