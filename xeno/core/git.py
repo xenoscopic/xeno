@@ -137,8 +137,7 @@ def initialize_remote_repository(path):
                  '--author',
                  '"xeno <xeno@xeno>"',
                  '-m',
-                 '""',
-                 '--allow-empty-message'],
+                 '"xeno-commit"'],
                 'Unable to commit initial files',
                 cwd=repo_path,
                 error_cleanup=error_cleanup)
