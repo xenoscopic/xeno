@@ -24,7 +24,13 @@ setup(
 
             # Convenience aliases for users to use as a replacement for their
             # normal editor command
-            'xen = xeno.commands.edit:main'
+            'xen = xeno.commands.edit:main',
+
+            # Special wrapper for git-receive-pack which will do a check for
+            # and commit of changes on the remote any time there is a push,
+            # regardless of whether that push actually sends any commits to the
+            # remote
+            'xeno-receive-pack = xeno.commands.receive:main'
         ],
     },
 

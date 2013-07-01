@@ -193,14 +193,11 @@ def main():
             pass
 
     # Enter our main loop
-    succeeded_last_time = True
     while True:
         # Do the sync
-        succeeded_last_time = \
-            sync_local_with_remote(repo_path,
-                                   poll_remote,
-                                   remote_is_file,
-                                   not succeeded_last_time)
+        sync_local_with_remote(repo_path,
+                               poll_remote,
+                               remote_is_file)
 
         # Sleep
         time.sleep(sync_interval)

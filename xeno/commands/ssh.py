@@ -89,7 +89,7 @@ def create_fifo():
 
 
 # Method to clean up monitoring FIFO on exit
-def cleanup_fifo():
+def cleanup_fifo(*args):
     """Tries to clean up the monitoring FIFO, warning the user if it can't.
     """
     # Switch to the global variables
@@ -99,6 +99,7 @@ def cleanup_fifo():
     if _FIFO_PATH is not None:
         try:
             os.remove(_FIFO_PATH)
+            _FIFO_PATH = None
         except OSError:
             print_warning('Unable to remove FIFO: {0}'.format(_FIFO_PATH))
 
@@ -109,8 +110,13 @@ def main():
     This method handles the 'xeno ssh' subcommand by starting an ssh session
     which is xeno-aware.
     """
-    # Register the FIFO cleanup method
+    # Register the FIFO cleanup method for normal exit
     atexit.register(cleanup_fifo)
+
+    # Register the FIFO cleanup method for other exit
+    signal.signal(signal.SIGINT, cleanup_fifo)
+    signal.signal(signal.SIGTERM, cleanup_fifo)
+    signal.signal(signal.SIGHUP, cleanup_fifo)
 
     # Create the FIFO.  This method will exit on failure.
     fifo_path = create_fifo()
@@ -125,7 +131,7 @@ def main():
     if args.user_hostname is not None:
         user_hostname_split = args.user_hostname.split('@')
         if len(user_hostname_split) == 1:
-            hostname = user_hostname_split
+            hostname = user_hostname_split[0]
         elif len(user_hostname_split) == 2:
             username, hostname = user_hostname_split
     if args.port is not None:
