@@ -153,6 +153,4 @@ TODO List
 - Replace local polling with `watchdog` or a similar file-monitoring library
 - Add exclude/include options to `xeno edit`
 - Cross-platform support
-- Make daemonization work a bit better.  For some reason the daemon subprocesses
-  still send their output to the TTY.
 - Fix all code TODOs and HACKs
