@@ -197,47 +197,41 @@ def commit(repo_path, commit_modified, commit_created, commit_deleted):
     # Commit modified files
     if commit_modified and modified:
         changes_added = True
-        for path in modified:
-            try:
-                check_call(['git',
-                            'add',
-                            path],
-                           cwd=repo_path,
-                           stdout=null_output,
-                           stderr=null_output)
-            except:
-                # Ignore errors here for now
-                pass
+        try:
+            check_call(['git',
+                        'add'] + modified,
+                       cwd=repo_path,
+                       stdout=null_output,
+                       stderr=null_output)
+        except:
+            # Ignore errors here for now
+            pass
 
     # Commit deleted files
     if commit_deleted and deleted:
         changes_added = True
-        for path in deleted:
-            try:
-                check_call(['git',
-                            'rm',
-                            path],
-                           cwd=repo_path,
-                           stdout=null_output,
-                           stderr=null_output)
-            except:
-                # Ignore errors here for now
-                pass
+        try:
+            check_call(['git',
+                        'rm'] + deleted,
+                       cwd=repo_path,
+                       stdout=null_output,
+                       stderr=null_output)
+        except:
+            # Ignore errors here for now
+            pass
 
     # Commit new files
     if commit_created and created:
         changes_added = True
-        for path in created:
-            try:
-                check_call(['git',
-                            'add',
-                            path],
-                           cwd=repo_path,
-                           stdout=null_output,
-                           stderr=null_output)
-            except:
-                # Ignore errors here for now
-                pass
+        try:
+            check_call(['git',
+                        'add'] + created,
+                       cwd=repo_path,
+                       stdout=null_output,
+                       stderr=null_output)
+        except:
+            # Ignore errors here for now
+            pass
 
     # If we added anything, do the commit
     commited = False
