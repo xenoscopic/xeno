@@ -79,11 +79,13 @@ def initialization_token_from_remote_path(remote_path):
         remote_path.file_path.replace(' ', '\\ ')
     ))
 
-    # Execute the subprocess
+    # Execute the subprocess on the remote.  If it fails, its output should be
+    # insightful.
     try:
-        output = subprocess.check_output(command_list)
+        output = subprocess.check_output(command_list,
+                                         stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
-        print_error('Trying to initialize over SSH failed')
+        print_error('Trying to initialize over SSH failed: {0}'.format(output))
         exit(1)
 
     # Look for a token

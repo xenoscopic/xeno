@@ -3,7 +3,6 @@ from sys import exit
 import os
 from os.path import expanduser, exists, isfile, join, dirname, basename, \
     normpath, realpath, relpath
-import subprocess
 from subprocess import check_call, check_output
 import uuid
 from shutil import rmtree
@@ -134,12 +133,18 @@ def clone(clone_url, local_destination):
         local_destination: The local path to clone into.  It must not exist.
     """
     # Do the clone
-    _check_call(['git',
-                 'clone',
-                 '--quiet',
-                 clone_url,
-                 local_destination],
-                'Unable to clone remote repository')
+    with open(os.devnull, 'w') as null_output:
+        try:
+            check_call(['git',
+                        'clone',
+                        '--quiet',
+                        clone_url,
+                        local_destination],
+                       stdout=null_output,
+                       stderr=null_output)
+        except:
+            print_error('Unable to clone remote repository')
+            exit(1)
 
 
 def commit(repo_path, commit_modified, commit_created, commit_deleted):
@@ -369,28 +374,29 @@ def self_destruct_remote(repo_path):
         repo_path: The path to the repository
     """
     try:
-        # Create the destructive commit
-        subprocess.call(['git',
-                         'commit',
-                         '--quiet',
-                         '--author',
-                         '"xeno <xeno@xeno>"',
-                         '-m',
-                         '"xeno-destruct"',
-                         '--allow-empty'],
-                        cwd=repo_path)
+        # Create the destructive commit and push it back to the remote,
+        # ignoring all output because the remote will spit back a fatal error
+        with open(os.devnull, 'w') as null_output:
+            check_call(['git',
+                        'commit',
+                        '--quiet',
+                        '--author',
+                        '"xeno <xeno@xeno>"',
+                        '-m',
+                        '"xeno-destruct"',
+                        '--allow-empty'],
+                       cwd=repo_path,
+                       stdout=null_output,
+                       stderr=null_output)
 
-        # Push it to the remote, ignoring all output because the remote will
-        # spit back a fatal error
-        with open(os.devnull, 'w') as devnull_output:
-            subprocess.check_call(['git',
-                                   'push',
-                                   '--quiet',
-                                   'origin',
-                                   'master:incoming'],
-                                  cwd=repo_path,
-                                  stdout=devnull_output,
-                                  stderr=devnull_output)
+            check_call(['git',
+                        'push',
+                        '--quiet',
+                        'origin',
+                        'master:incoming'],
+                       cwd=repo_path,
+                       stdout=null_output,
+                       stderr=null_output)
     except:
         # Oh well, we did our best..., just let it pass but print a message
         print_error('Unable to self-destruct remote repository')
@@ -407,13 +413,19 @@ def add_metadata_to_repo(repo_path, key, value):
         key: The key to set, must be camel case
         value: The value to set the key to
     """
-    # Set the value
-    _check_call(['git',
-                 'config',
-                 'xeno.{0}'.format(key),
-                 value],
-                'Unable to set repository metadata',
-                cwd=repo_path)
+    # Do the clone
+    with open(os.devnull, 'w') as null_output:
+        try:
+            check_call(['git',
+                        'config',
+                        'xeno.{0}'.format(key),
+                        value],
+                       cwd=repo_path,
+                       stdout=null_output,
+                       stderr=null_output)
+        except:
+            print_error('Unable to add repository metadata')
+            exit(1)
 
 
 def get_metadata_from_repo(repo_path, key):
@@ -432,10 +444,10 @@ def get_metadata_from_repo(repo_path, key):
         string.  This method exits on failure.
     """
     try:
-        output = subprocess.check_output(['git',
-                                          'config',
-                                          'xeno.{0}'.format(key)],
-                                         cwd=repo_path)
+        output = check_output(['git',
+                               'config',
+                               'xeno.{0}'.format(key)],
+                              cwd=repo_path)
     except:
         print_error('Unable to read repository metadata')
         exit(1)
