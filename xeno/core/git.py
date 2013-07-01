@@ -334,16 +334,24 @@ def sync_local_with_remote(repo_path,
                    stdout=null_output,
                    stderr=null_output)
 
+        # HACK: The --no-edit flag was not added until Git 1.7.10, because
+        # the editor didn't start popping up automatically until then.  Setting
+        # this environment variable has the same effect as the --no-edit flag
+        # and will not affect older versions of Git.
+        # I use dict() here instead of .copy() because I don't think the
+        # os.environ variable is guaranteed to have a copy() method.
+        no_auto_edit_env = dict(os.environ)
+        no_auto_edit_env['GIT_MERGE_AUTOEDIT'] = 'no'
         check_call(['git',
                     'pull',
                     '--quiet',
                     '--commit',
-                    '--no-edit',
                     '--strategy',
                     'recursive',
                     '-X',
                     'ours'],
                    cwd=repo_path,
+                   env=no_auto_edit_env,
                    stdout=null_output,
                    stderr=null_output)
     except:

@@ -3,7 +3,10 @@
 # Merge the 'incoming' branch into 'master' using the 'incoming' branch
 # as canonical during conflicts.
 # HACK: This little guy will not shut up, have to manually silence him
-git merge incoming --quiet --commit --no-edit -m "xeno-remote-merge" --strategy=recursive -X theirs > /dev/null 2>&1
+# HACK: The --no-edit flag wasn't added til Git 1.7.10, and before that, the
+# editor did not pop up automatically.  This environment variable has the same
+# effect as --no-edit and will not affect older versions of Git.
+GIT_MERGE_AUTOEDIT=no git merge incoming --quiet --commit -m "xeno-remote-merge" --strategy=recursive -X theirs > /dev/null 2>&1
 
 # Look for any self-destruct messages
 if [ -n "`git log --grep xeno-destruct`" ]; then
