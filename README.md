@@ -111,7 +111,7 @@ Requirements
 ------------
 - POSIX-based operating system (I'll happily review pull requests for Windows)
 - Python 2.7+ (Including Python 3.x, although please report bugs)
-- Git
+- Git 1.7.10+
 - OpenSSH
 
 
