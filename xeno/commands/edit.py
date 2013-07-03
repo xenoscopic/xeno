@@ -1,6 +1,7 @@
 # System imports
-import os
 from sys import exit
+import os
+from os.path import realpath, normpath
 import argparse
 import subprocess
 
@@ -122,9 +123,13 @@ def main():
         if in_ssh:
             # If we're running in SSH, then we need to create the 'remote'
             # repository for the client to clone and spit out the
-            # initialization string
-            repo_path = initialize_remote_repository(path.file_path)
-            print(create_initialization_token(path.file_path, repo_path))
+            # initialization string.  First though, we need to make sure we
+            # normalize the path for when we create our initialization token,
+            # since the local xeno will rely on the remote end to provide a
+            # reasonable value.
+            edit_path = realpath(normpath(path.file_path))
+            repo_path = initialize_remote_repository(edit_path)
+            print(create_initialization_token(edit_path, repo_path))
             exit(0)
         else:
             # If we're not running in SSH, then the user is just using
