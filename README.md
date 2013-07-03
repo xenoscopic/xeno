@@ -150,7 +150,9 @@ without losing any sleep.
 
 TODO List
 ---------
-- Replace local polling with `watchdog` or a similar file-monitoring library
 - Add exclude/include options to `xeno edit`
+- Add option to use xeno-sync as a normal subcommand to flush out a local
+  working copy
+- Replace local polling with `watchdog` or a similar file-monitoring library
 - Cross-platform support
 - Fix all code TODOs and HACKs
