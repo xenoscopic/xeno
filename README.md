@@ -150,9 +150,10 @@ without losing any sleep.
 
 TODO List
 ---------
-- Add exclude/include options to `xeno edit`
+- Refactor session listing into core library
 - Add option to use xeno-sync as a normal subcommand to flush out a local
   working copy
+- Add exclude/include options to `xeno edit`
 - Replace local polling with `watchdog` or a similar file-monitoring library
 - Cross-platform support
 - Fix all code TODOs and HACKs
