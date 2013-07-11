@@ -91,8 +91,8 @@ def initialize_remote_repository(path):
     # above the repo directory.  In any case, I think git will always ignore
     # the repo directory.
     if not commit(repo_path,
-                  commit_modified=False,
                   commit_created=True,
+                  commit_modified=False,
                   commit_deleted=False):
         print_error('Unable to add initial commit to remote repository')
         rmtree(repo_path)
@@ -122,6 +122,50 @@ def initialize_remote_repository(path):
     return repo_path
 
 
+def status(repo_path):
+    """Checks the status of a repository looking for changes.
+
+    Args:
+        repo_path: The path to the repository
+
+    Returns:
+        A tuple of lists of the form (created, modified, deleted).  Each list
+        contains paths relative to the root of the repository.
+    """
+    # Set up results
+    created = []
+    modified = []
+    deleted = []
+    results = (created, modified, deleted)
+
+    # Try running git status --porcelain and parsing output
+    try:
+        # First run the command
+        all_changes = check_output(['git',
+                                    'status',
+                                    '--porcelain'],
+                                   cwd=repo_path).split(os.linesep)
+        
+        # Go through each line and add changes
+        for change in all_changes:
+            # Parse the line
+            parsed = change.strip().partition(' ')
+            code, path = parsed[0], parsed[2]
+
+            # Check the type
+            if code == '??':
+                created.append(path)
+            elif code == 'M':
+                modified.append(path)
+            elif code == 'D':
+                deleted.append(path)
+    except:
+        # Just ignore errors
+        pass
+
+    return results
+
+
 def clone(clone_url, local_destination):
     """Clones a remote URL to a local path, pulling down all branches and
     setting them up to track from the remote.
@@ -147,52 +191,49 @@ def clone(clone_url, local_destination):
             exit(1)
 
 
-def commit(repo_path, commit_modified, commit_created, commit_deleted):
+def commit(repo_path, commit_created, commit_modified, commit_deleted):
     """Checks if there are any changes to the repository and commits them.
 
     Args:
         repo_path: The path to the repository
-        commit_modified: Whether or not to commit modified files
         commit_created: Commit new (untracked) files
+        commit_modified: Whether or not to commit modified files
         commit_deleted: Commit deletions
 
     Returns:
         True if a new commit was created, False if not.
     """
+    # Grab the work tree for the git repository.  If this is not set, then the
+    # work_tree variable will be an empty string, so the join below will have
+    # no effect.  This is okay because it means the work tree and repository
+    # path are the same, and paths returned from status will work with Git
+    # add/rm commands.
+    work_tree = get_metadata_from_repo(repo_path, 'core.worktree', True)
+
     # First check what files have been modified/created/deleted
-    try:
-        # All files which have been modified or deleted
-        modified_deleted = check_output(['git',
-                                         'ls-files',
-                                         '--modified',
-                                         '--exclude-standard'],
-                                        cwd=repo_path).split(os.linesep)
-
-        # All files which have been deleted
-        deleted = check_output(['git',
-                                'ls-files',
-                                '--deleted',
-                                '--exclude-standard'],
-                               cwd=repo_path).split(os.linesep)
-
-        # All files which have been modified
-        modified = list(set(modified_deleted) - set(deleted))
-
-        # All files which have been created
-        created = check_output(['git',
-                                'ls-files',
-                                '--other',
-                                '--exclude-standard'],
-                               cwd=repo_path).split(os.linesep)
-    except:
-        # Just ignore errors, but don't commit
-        return False
-
+    created, modified, deleted = status(repo_path)
+    created = [join(work_tree, path) for path in created]
+    modified = [join(work_tree, path) for path in modified]
+    deleted = [join(work_tree, path) for path in deleted]
+    
     # Now stage all requested changes
     changes_added = False
 
     # Muffle all output
     null_output = open(os.devnull, 'w')
+
+    # Commit new files
+    if commit_created and created:
+        changes_added = True
+        try:
+            check_call(['git',
+                        'add'] + created,
+                       cwd=repo_path,
+                       stdout=null_output,
+                       stderr=null_output)
+        except:
+            # Ignore errors here for now
+            pass
 
     # Commit modified files
     if commit_modified and modified:
@@ -213,19 +254,6 @@ def commit(repo_path, commit_modified, commit_created, commit_deleted):
         try:
             check_call(['git',
                         'rm'] + deleted,
-                       cwd=repo_path,
-                       stdout=null_output,
-                       stderr=null_output)
-        except:
-            # Ignore errors here for now
-            pass
-
-    # Commit new files
-    if commit_created and created:
-        changes_added = True
-        try:
-            check_call(['git',
-                        'add'] + created,
                        cwd=repo_path,
                        stdout=null_output,
                        stderr=null_output)
@@ -300,8 +328,8 @@ def sync_local_with_remote(repo_path,
     # Commit our local changes, and if there are any commits, we need to push
     # them
     do_push = commit(repo_path,
-                     commit_modified=True,
                      commit_created=(not remote_is_file),
+                     commit_modified=True,
                      commit_deleted=(not remote_is_file))
 
     # If we didn't commit anything, check if we have any pending commits that
@@ -432,10 +460,7 @@ def add_metadata_to_repo(repo_path, key, value):
 
 def get_metadata_from_repo(repo_path, key, key_includes_section=False):
     """Retrieve the metadata associated with the specified key in the specified
-    repository under the xeno section.
-
-    This method will print an error and exit on failure.  If the specified key
-    doesn't exist, this method returns an empty string.
+    repository under the xeno section or other section.
 
     Args:
         repo_path: The path to the repository
@@ -447,7 +472,7 @@ def get_metadata_from_repo(repo_path, key, key_includes_section=False):
 
     Returns:
         The value associated with the key, if it exists, otherwise an empty
-        string.  This method exits on failure.
+        string.
     """
     try:
         output = check_output(['git',
@@ -459,8 +484,8 @@ def get_metadata_from_repo(repo_path, key, key_includes_section=False):
                               ],
                               cwd=repo_path)
     except:
-        print_error('Unable to read repository metadata')
-        exit(1)
+        # Assume output errors are due to the value not being set
+        return ''
 
     return output.strip()
 
