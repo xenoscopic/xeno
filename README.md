@@ -153,6 +153,12 @@ tin-foil-hat-inducing for you, you can still use the local launch mechanism
 without losing any sleep.
 
 
+More Information
+----------------
+For more detailed information, please see the
+[xeno wiki](https://github.com/havoc-io/xeno/wiki).
+
+
 TODO List
 ---------
 - Replace local polling with `watchdog` or a similar file-monitoring library
