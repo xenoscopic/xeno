@@ -64,6 +64,7 @@ xeno supports the following subcommands:
 - __list__: Lists active xeno sessions
 - __resume__: Resumes a xeno session (open your editor on the local copy)
 - __stop__: Stops a xeno session and cleans up local/remote resources
+- __sync__: Syncs a xeno session with the remote copy
 
 For convenience, the `xeno edit` command is aliased as `xen`.  To keep
 consistency, if you use the `xeno edit` command on a local path, it will simply
@@ -150,10 +151,7 @@ without losing any sleep.
 
 TODO List
 ---------
-- Refactor session listing into core library
-- Add option to use xeno-sync as a normal subcommand to flush out a local
-  working copy
 - Add exclude/include options to `xeno edit`
 - Replace local polling with `watchdog` or a similar file-monitoring library
-- Cross-platform support
+- Finish Windows support
 - Fix all code TODOs and HACKs

@@ -22,12 +22,13 @@ def start_syncing(remote_path_is_file, remote_path, cloneable_path):
     """
     # Launch the xeno-sync command
     command = ['xeno-sync',
+               '--daemonize',
                '--remote-path',
                remote_path,
                '--clone-url',
                cloneable_path]
     if remote_path_is_file:
-        command.append('--file')
+        command.append('--remote-is-file')
     try:
         # HACK: Use Popen because check_output seems to halt waiting for all
         # child processes to complete, even though the daemon forked off of

@@ -14,6 +14,8 @@ from xeno.core.configuration import get_configuration, string_to_bool
 from xeno.core.paths import get_working_directory
 from xeno.core.git import clone, add_metadata_to_repo, \
     sync_local_with_remote, self_destruct_remote
+from xeno.core.sessions import get_sessions, XENO_SESSION_LOCAL_PROCESS_ID, \
+    XENO_SESSION_LOCAL_REPOSITORY_PATH, XENO_SESSION_REMOTE_IS_FILE
 
 
 def parse_arguments():
@@ -26,35 +28,53 @@ def parse_arguments():
     """
     # Set up the core parser
     parser = argparse.ArgumentParser(
-        description='do a remote synchronization session with xeno (this '
-                    'subcommand is not meant for direct use)',
-        usage='xeno-sync [-h|--help]',
+        description='synchronize a xeno session with the remote',
+        usage='xeno-sync [-h|--help] session',
     )
 
     # Add arguments
-    parser.add_argument('-f',
-                        '--file',
+    parser.add_argument('--daemonize',
                         action='store_true',
-                        help='indicates the remote path is a file',
-                        dest='file')
-    parser.add_argument('-r',
-                        '--remote-path',
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--remote-path',
                         action='store',
                         nargs=1,
-                        required=True,
-                        help='the remote path being edited',
+                        help=argparse.SUPPRESS,
                         dest='remote_path')
-    parser.add_argument('-c',
-                        '--clone-url',
+    parser.add_argument('--remote-is-file',
+                        action='store_true',
+                        help=argparse.SUPPRESS,
+                        dest='remote_is_file')
+    parser.add_argument('--clone-url',
                         action='store',
                         nargs=1,
-                        required=True,
-                        help='the Git clone URL',
+                        help=argparse.SUPPRESS,
                         dest='clone_url')
-    parser.add_argument('--no-daemon',
+    parser.add_argument('--foreground',
                         action='store_true',
-                        help='do not daemonize (for debugging)',
-                        dest='no_daemon')
+                        help=argparse.SUPPRESS)
+    parser.add_argument('session',
+                        help='the session number to synchronize (the first '
+                             'column in \'xeno list\')',
+                        action='store',
+                        nargs='?')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Check if we are a daemon, and if so validate other arguments
+    if args.daemonize:
+        if args.remote_path is None:
+            print_error('Remote path must be specified for daemon mode')
+            exit(1)
+        if args.clone_url is None:
+            print_error('Clone URL must be specified for daemon mode')
+    else:
+        # If we are not a daemon, and there is no session specified, print help
+        # and exit
+        if args.session is None:
+            parser.print_help()
+            exit(1)
 
     # Do the parsing
     return parser.parse_args()
@@ -103,8 +123,48 @@ def main():
     # Parse arguments
     args = parse_arguments()
 
-    # Extract them
-    remote_is_file = args.file
+    # Check if we are running in daemon mode.  If not, then we are just doing
+    # a single sync.  Try to identify the specified session.
+    if not args.daemonize:
+        # Convert the session id
+        try:
+            pid = int(args.session)
+        except:
+            print_error('Invalid session id: {0}'.format(args.session))
+            exit(1)
+
+        # Grab all sessions
+        sessions = get_sessions()
+
+        # Find our session
+        for session in sessions:
+            # Grab the metadata
+            process_id = session[XENO_SESSION_LOCAL_PROCESS_ID]
+
+            # Check if it matches
+            if pid == process_id:
+                # Do a sync
+                result = sync_local_with_remote(
+                    session[XENO_SESSION_LOCAL_REPOSITORY_PATH],
+                    True, # Poll the remote
+                    session[XENO_SESSION_REMOTE_IS_FILE]
+                )
+
+                # Show the result and exit
+                if not result:
+                    print_error('Unable to complete sync')
+                    exit(1)
+
+                exit(0)
+
+        # Couldn't find a match
+        print_error('Couldn\'t find specified session: {0}'.format(
+            args.session
+        ))
+        exit(1)
+
+    # At this point, we are becoming a daemon.  Extract arguments.
+    remote_is_file = args.remote_is_file
     remote_path = args.remote_path[0]
     clone_url = args.clone_url[0]
 
@@ -148,7 +208,7 @@ def main():
     sys.stdout.flush()
 
     # Daemonize (unless told not to)
-    if not args.no_daemon:
+    if not args.foreground:
         daemonize()
 
     # We are the daemon (or the original process if we didn't daemonize).  Add

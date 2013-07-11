@@ -60,13 +60,6 @@ def main():
         print_error('Invalid session id: {0}'.format(args.session))
         exit(1)
 
-    # Make sure it is still alive
-    try:
-        os.kill(pid, 0)
-    except:
-        print_error('Session is not active: {0}'.format(pid))
-        exit(1)
-
     # Grab the sessions
     sessions = get_sessions()
 
