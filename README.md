@@ -120,14 +120,15 @@ Requirements
 
 Installation
 ------------
-The easiest (and only supported way) of installing xeno is using pip:
+The easiest (and only supported) way of installing xeno is using pip:
 
     pip install git+https://github.com/havoc-io/xeno.git
 
 xeno needs to be installed on both ends of the editing connection.  You also
-need to have pip's console_scripts install directory for both login AND
-non-login shells.  The former is pretty easy and likely on by default, the
-latter usually has to be done manually in your `~/.bashrc` or `~/.zshenv` files.
+need to have pip's console_scripts install directory in your path for both login
+AND non-login shells.  Adding the path to your login shell is pretty easy and
+likely on by default.  Non-login shells usually require an entry in your
+`~/.bashrc` or `~/.zshenv` file.
 
 It is important to note that on some systems, e.g. Ubuntu, there is a statement
 in the default ~/.bashrc to prevent it from being run for non-interactive
