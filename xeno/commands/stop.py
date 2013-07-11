@@ -3,13 +3,10 @@ from sys import exit
 import os
 import signal
 import argparse
-import glob
-from os.path import join
 
 # xeno imports
 from xeno.core.output import print_error
-from xeno.core.paths import get_working_directory
-from xeno.core.git import get_metadata_from_repo
+from xeno.core.sessions import get_sessions
 
 
 def parse_arguments():
@@ -59,20 +56,16 @@ def main():
         print_error('Invalid session id: {0}' % args.session)
         exit(1)
 
-    # Make sure it is actually a xeno session
-    possible_repos = glob.glob(join(
-        get_working_directory(),
-        'local-*',
-        '*'
-    ))
+    # Grab the sessions
+    sessions = get_sessions()
 
     # Go through the repos
-    for repo in possible_repos:
+    for session in sessions:
         # Grab the metadata
-        process_id = get_metadata_from_repo(repo, 'syncProcessId')
+        process_id = session[0]
 
         # Check if it matches
-        if args.session == process_id:
+        if pid == process_id:
             # Send a SIGTERM to the session
             os.kill(pid, signal.SIGTERM)
 

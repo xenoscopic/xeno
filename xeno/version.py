@@ -3,7 +3,7 @@ import sys
 from os import linesep
 
 # Version constants
-XENO_VERSION = (0, 0, 1)
+XENO_VERSION = (0, 0, 2)
 XENO_MIN_PYTHON_VERSION = (2, 7, 0)
 
 
