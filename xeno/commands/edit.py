@@ -3,6 +3,7 @@ from sys import exit
 import os
 from os.path import realpath, normpath
 import argparse
+from itertools import chain
 import subprocess
 
 # xeno imports
@@ -27,7 +28,8 @@ def parse_arguments():
     # Set up the core parser
     parser = argparse.ArgumentParser(
         description='edit paths with xeno',
-        usage='xeno-edit [-h|--help] [[username@]hostname:[port:]]file_path',
+        usage='xeno-edit [-h|--help] [[username@]hostname:[port:]]file_path \n'
+              '\t[-i|--ignore <ignore> [<ignore> ...]]',
     )
 
     # Add arguments
@@ -36,9 +38,20 @@ def parse_arguments():
                              'remote specification',
                         action='store',
                         nargs='?')
+    parser.add_argument('-i',
+                        '--ignore',
+                        action='append',
+                        nargs='+',
+                        default=[],
+                        help='add exclude paths in gitignore format, '
+                             'including \'!\' values',
+                        metavar='<ignore>')
 
     # Do the parsing
     args = parser.parse_args()
+
+    # Join all the ignore paths
+    args.ignore = list(chain(*args.ignore))
 
     # Check if the user needs help
     if args.path_or_remote is None:
@@ -48,13 +61,14 @@ def parse_arguments():
     return args
 
 
-def initialization_token_from_remote_path(remote_path):
+def initialization_token_from_remote_path(remote_path, ignore_paths):
     """Remotely executes xeno-edit on the remote path and returns the
     initialization token path or exits.
 
     Args:
         remote_path: The xeno.core.paths.Path object representing the remote
             path
+        ignore_paths: A list of ignore entries to pass to the remote repository
 
     Returns:
         The initialization token dictionary on success, exits on failure.
@@ -75,18 +89,27 @@ def initialization_token_from_remote_path(remote_path):
     else:
         command_list.append(remote_path.hostname)
 
-    # Add the xeno edit command, escaping any spaces in the remote path
-    command_list.append('xeno-edit {0}'.format(
-        remote_path.file_path.replace(' ', '\\ ')
+    # Add the xeno edit command, escaping any spaces in the remote path, and
+    # passing any ignore paths
+    ignore_flags = ''
+    if ignore_paths:
+        ignore_flags = ' --ignore {0}'.format(
+            ' '.join(ignore_paths)
+        )
+    command_list.append('xeno-edit {0}{1}'.format(
+        remote_path.file_path.replace(' ', '\\ '),
+        ignore_flags
     ))
 
     # Execute the subprocess on the remote.  If it fails, its output should be
     # insightful.
     try:
-        output = subprocess.check_output(command_list,
-                                         stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
-        print_error('Trying to initialize over SSH failed: {0}'.format(output))
+        subprocess.check_output(command_list,
+                                stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print_error('Trying to initialize over SSH failed: {0}'.format(
+            e.output
+        ))
         exit(1)
 
     # Look for a token
@@ -128,7 +151,7 @@ def main():
             # since the local xeno will rely on the remote end to provide a
             # reasonable value.
             edit_path = realpath(normpath(path.file_path))
-            repo_path = initialize_remote_repository(edit_path)
+            repo_path = initialize_remote_repository(edit_path, args.ignore)
             print(create_initialization_token(edit_path, repo_path))
             exit(0)
         else:
@@ -139,7 +162,10 @@ def main():
     # Otherwise the path is remote, so we need to invoke SSH to the remote
     # destination and run the xeno-edit command there to get the clone-able
     # path.  This method will exit if it fails.
-    initialization_token = initialization_token_from_remote_path(path)
+    initialization_token = initialization_token_from_remote_path(
+        path,
+        args.ignore
+    )
 
     # Parse up the initialization token
     remote_is_file = initialization_token[INITIALIZATION_KEY_IS_FILE]

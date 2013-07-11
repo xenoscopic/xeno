@@ -16,13 +16,15 @@ from xeno.core.paths import get_working_directory
 from xeno.core.configuration import get_configuration
 
 
-def initialize_remote_repository(path):
+def initialize_remote_repository(path, ignore_paths):
     """This method initializes a remote repository which xeno can clone locally
     to do its editing.
 
     Args:
         path: The path of the file or directory that the repository should
             monitor and modify
+        ignore_paths: A list of entries to put in the info/exclude file of the
+            repository (hence all gitignore patterns are supported)
 
     Returns:
         A string representing the repository path.
@@ -85,6 +87,10 @@ def initialize_remote_repository(path):
             # All the major SCM dirs to the exclude
             for scm_dir in ['.git', '.svn', '.hg']:
                 exclude_file.write('{0}\n'.format(scm_dir))
+
+        # Add all additional ignore paths
+        for ignore_path in ignore_paths:
+            exclude_file.write('{0}\n'.format(ignore_path))
 
     # Add all files and do the initial commit.  We have to use this wildcard
     # expression for the pathspec due to how git behaves when the work tree is

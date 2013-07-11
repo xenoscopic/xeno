@@ -153,7 +153,6 @@ without losing any sleep.
 
 TODO List
 ---------
-- Add exclude/include options to `xeno edit`
 - Replace local polling with `watchdog` or a similar file-monitoring library
 - Finish Windows support
 - Fix all code TODOs and HACKs
