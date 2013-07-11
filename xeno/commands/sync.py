@@ -146,7 +146,7 @@ def main():
                 # Do a sync
                 result = sync_local_with_remote(
                     session[XENO_SESSION_LOCAL_REPOSITORY_PATH],
-                    True, # Poll the remote
+                    True,  # Poll the remote
                     session[XENO_SESSION_REMOTE_IS_FILE]
                 )
 

@@ -145,7 +145,7 @@ def status(repo_path):
                                     'status',
                                     '--porcelain'],
                                    cwd=repo_path).split(os.linesep)
-        
+
         # Go through each line and add changes
         for change in all_changes:
             # Parse the line
@@ -215,7 +215,7 @@ def commit(repo_path, commit_created, commit_modified, commit_deleted):
     created = [join(work_tree, path) for path in created]
     modified = [join(work_tree, path) for path in modified]
     deleted = [join(work_tree, path) for path in deleted]
-    
+
     # Now stage all requested changes
     changes_added = False
 
@@ -478,10 +478,9 @@ def get_metadata_from_repo(repo_path, key, key_includes_section=False):
         output = check_output(['git',
                                'config',
                                '{0}{1}'.format(
-                                    '' if key_includes_section else 'xeno.',
-                                    key
-                                )
-                              ],
+                                   '' if key_includes_section else 'xeno.',
+                                   key
+                               )],
                               cwd=repo_path)
     except:
         # Assume output errors are due to the value not being set

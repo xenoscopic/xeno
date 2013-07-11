@@ -77,10 +77,12 @@ def main():
 
             # Calculate the editor path
             if remote_is_file:
-                edit_path = join(session[XENO_SESSION_LOCAL_REPOSITORY_PATH],
-                                 basename(
-                                    session[XENO_SESSION_REMOTE_PATH]
-                                ))
+                edit_path = join(
+                    session[XENO_SESSION_LOCAL_REPOSITORY_PATH],
+                    basename(
+                        session[XENO_SESSION_REMOTE_PATH]
+                    )
+                )
             else:
                 edit_path = session[XENO_SESSION_LOCAL_REPOSITORY_PATH]
 
