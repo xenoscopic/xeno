@@ -430,7 +430,7 @@ def add_metadata_to_repo(repo_path, key, value):
             exit(1)
 
 
-def get_metadata_from_repo(repo_path, key):
+def get_metadata_from_repo(repo_path, key, key_includes_section=False):
     """Retrieve the metadata associated with the specified key in the specified
     repository under the xeno section.
 
@@ -440,6 +440,10 @@ def get_metadata_from_repo(repo_path, key):
     Args:
         repo_path: The path to the repository
         key: The key to read, must be camel case
+        key_includes_section: If False, 'xeno.' will be prepended to the
+            specified key, otherwise the key will be passed in it's entirety to
+            git config.  This setting is useful to access non-xeno
+            configuration values.
 
     Returns:
         The value associated with the key, if it exists, otherwise an empty
@@ -448,7 +452,11 @@ def get_metadata_from_repo(repo_path, key):
     try:
         output = check_output(['git',
                                'config',
-                               'xeno.{0}'.format(key)],
+                               '{0}{1}'.format(
+                                    '' if key_includes_section else 'xeno.',
+                                    key
+                                )
+                              ],
                               cwd=repo_path)
     except:
         print_error('Unable to read repository metadata')

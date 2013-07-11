@@ -135,7 +135,6 @@ def main():
     # Set metadata on the local repo
     add_metadata_to_repo(repo_path, 'remoteIsFile', str(remote_is_file))
     add_metadata_to_repo(repo_path, 'remotePath', remote_path)
-    add_metadata_to_repo(repo_path, 'cloneUrl', clone_url)
 
     # Print the editable path.
     # HACK: We have to flush, because the daemon process will inherit the same

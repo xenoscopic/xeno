@@ -6,7 +6,7 @@ import argparse
 
 # xeno imports
 from xeno.core.output import print_error
-from xeno.core.sessions import get_sessions
+from xeno.core.sessions import get_sessions, XENO_SESSION_LOCAL_PROCESS_ID
 
 
 def parse_arguments():
@@ -59,10 +59,10 @@ def main():
     # Grab the sessions
     sessions = get_sessions()
 
-    # Go through the repos
+    # Go through the sessions
     for session in sessions:
         # Grab the metadata
-        process_id = session[0]
+        process_id = session[XENO_SESSION_LOCAL_PROCESS_ID]
 
         # Check if it matches
         if pid == process_id:

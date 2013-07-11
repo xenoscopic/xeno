@@ -2,15 +2,14 @@
 from sys import exit
 import os
 import argparse
-import glob
 from os.path import join, basename
 
 # xeno imports
 from xeno.core.output import print_error
-from xeno.core.paths import get_working_directory
-from xeno.core.git import get_metadata_from_repo
+from xeno.core.sessions import get_sessions, XENO_SESSION_LOCAL_PROCESS_ID, \
+    XENO_SESSION_LOCAL_REPOSITORY_PATH, XENO_SESSION_REMOTE_PATH, \
+    XENO_SESSION_REMOTE_IS_FILE
 from xeno.core.editor import run_editor_on_local_path
-from xeno.core.configuration import string_to_bool
 
 
 def parse_arguments():
@@ -68,36 +67,29 @@ def main():
         print_error('Session is not active: {0}'.format(pid))
         exit(1)
 
-    # Find the corresponding repo
-    possible_repos = glob.glob(join(
-        get_working_directory(),
-        'local-*',
-        '*'
-    ))
+    # Grab the sessions
+    sessions = get_sessions()
 
-    # Go through the repos
-    for repo in possible_repos:
+    # Go through the sessions
+    for session in sessions:
         # Grab the metadata
-        process_id = get_metadata_from_repo(repo, 'syncProcessId')
+        process_id = session[XENO_SESSION_LOCAL_PROCESS_ID]
 
         # Check if it matches
-        if args.session == process_id:
+        if pid == process_id:
             # Found it!
 
             # Check if it is a single file
-            remote_is_file = string_to_bool(get_metadata_from_repo(
-                repo,
-                'remoteIsFile'
-            ))
+            remote_is_file = session[XENO_SESSION_REMOTE_IS_FILE]
 
             # Calculate the editor path
             if remote_is_file:
-                edit_path = join(repo, basename(get_metadata_from_repo(
-                    repo,
-                    'remotePath'
-                )))
+                edit_path = join(session[XENO_SESSION_LOCAL_REPOSITORY_PATH],
+                                 basename(
+                                    session[XENO_SESSION_REMOTE_PATH]
+                                ))
             else:
-                edit_path = repo
+                edit_path = session[XENO_SESSION_LOCAL_REPOSITORY_PATH]
 
             # Found it!
             exit(run_editor_on_local_path(edit_path))
