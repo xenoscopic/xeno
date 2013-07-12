@@ -1,7 +1,7 @@
 xeno
 ====
-xeno is a tool that enables remote file and folder editing over SSH using your
-text editor of choice, be it command line or GUI-based.
+[xeno](https://xeno.io/) is a tool that enables remote file and folder editing
+over SSH using your text editor of choice, be it command line or GUI-based.
 
 
 Features and Basic Usage
