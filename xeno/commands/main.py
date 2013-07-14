@@ -45,15 +45,7 @@ def parse_arguments():
                         version=STRINGIFY_VERSION(XENO_VERSION))
 
     # Add the subcommand group with a description of commonly-used commands
-    subcommand_group = parser.add_argument_group(
-        title='subcommands',
-        description='xeno farms out its work to a variety of subcommands.  '
-        'The primary subcommands are \'config\' and \'edit\'.  To view help '
-        'information on a particular subcommand, use \'xeno '
-        'EXAMPLE_SUBCOMMAND --help\'.  For your convenience, the \'xen\' '
-        'command has been created as an alias of \'xeno edit\', providing a '
-        'useful command for you to use on a daily basis to initiate editing.'
-    )
+    subcommand_group = parser.add_argument_group()
 
     # Add the subcommand argument, hiding its help information
     subcommand_group.add_argument('subcommand',
@@ -68,6 +60,17 @@ def parse_arguments():
     # with failure/success depending on whether or not they asked for help
     if known_args.subcommand is None:
         parser.print_help()
+        print('\nThe most commonly used xeno subcommands are:\n'
+              '  edit     start a xeno editing session\n'
+              '  list     list xeno editing sessions\n'
+              '  resume   resume a xeno editing session\n'
+              '  stop     stop a xeno editing session\n'
+              '  sync     manually synchronize a xeno editing session\n'
+              '  ssh      start a xeno-aware SSH session\n'
+              '  config   edit xeno configuration\n'
+              '\n'
+              'To see help information for a subcommand, use xeno '
+              '--help <subcommand>\n')
         if known_args.help:
             exit(0)
         else:
