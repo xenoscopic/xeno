@@ -14,6 +14,7 @@ from xeno.core.git import initialize_remote_repository, cloneable_remote_path
 from xeno.core.protocol import create_initialization_token, \
     check_for_initialization_token, INITIALIZATION_KEY_IS_FILE, \
     INITIALIZATION_KEY_REMOTE_PATH, INITIALIZATION_KEY_REPOSITORY_PATH
+from xeno.version import XENO_VERSION, STRINGIFY_VERSION
 from xeno.core.syncing import start_syncing
 
 
@@ -46,6 +47,11 @@ def parse_arguments():
                         help='add exclude paths in gitignore format, '
                              'including \'!\' values',
                         metavar='<ignore>')
+    parser.add_argument('--client-version',
+                        action='store',
+                        nargs=1,
+                        help=argparse.SUPPRESS,
+                        dest='client_version')
 
     # Do the parsing
     args = parser.parse_args()
@@ -96,16 +102,19 @@ def initialization_token_from_remote_path(remote_path, ignore_paths):
         ignore_flags = ' --ignore {0}'.format(
             ' '.join(ignore_paths)
         )
-    command_list.append('xeno-edit {0}{1}'.format(
+    command_list.append('xeno-edit {0}{1} {2}'.format(
         remote_path.file_path.replace(' ', '\\ '),
-        ignore_flags
+        ignore_flags,
+        '--client-version {0}'.format(
+            STRINGIFY_VERSION(XENO_VERSION)
+        )
     ))
 
     # Execute the subprocess on the remote.  If it fails, its output should be
     # insightful.
     try:
-        subprocess.check_output(command_list,
-                                stderr=subprocess.STDOUT)
+        output = subprocess.check_output(command_list,
+                                         stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         print_error('Trying to initialize over SSH failed: {0}'.format(
             e.output
