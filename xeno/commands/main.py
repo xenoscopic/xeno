@@ -31,7 +31,7 @@ def parse_arguments():
     """
     # Set up the core parser
     parser = argparse.ArgumentParser(
-        description='synchronous remote file editing',
+        description='synchronous remote file and folder editing',
         usage='xeno [-h|--help] [--version] <subcommand> [arguments]',
         add_help=False
     )
