@@ -164,6 +164,8 @@ For more detailed information, please see the
 
 TODO List
 ---------
+- Add core.debug setting
+- Modify output to use Python's logging system
 - Replace local polling with `watchdog` or a similar file-monitoring library
 - Finish Windows support
 - Fix all code TODOs and HACKs
