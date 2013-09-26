@@ -1,11 +1,12 @@
 # System imports
 import os
 import glob
+from itertools import chain
 
 # xeno imports
 from xeno.core.output import print_error
 from xeno.core.paths import get_working_directory
-from xeno.core.git import get_metadata_from_repo
+from xeno.core.git import get_metadata_from_repo, status
 from xeno.core.configuration import string_to_bool
 
 
@@ -15,6 +16,7 @@ XENO_SESSION_LOCAL_REPOSITORY_PATH = 'repositoryPath'
 XENO_SESSION_REMOTE_CLONE_URL = 'cloneUrl'
 XENO_SESSION_REMOTE_PATH = 'remotePath'
 XENO_SESSION_REMOTE_IS_FILE = 'remoteIsFile'
+XENO_SESSION_SYNC_STATUS = 'syncStatus'
 
 
 def get_sessions():
@@ -69,13 +71,18 @@ def get_sessions():
             ))
             continue
 
+        # Check the sync status
+        changes = list(chain(*status(repo)))
+        sync_status = 'unsynced' if changes else 'synced'
+
         # Add the result
         results.append({
             XENO_SESSION_LOCAL_PROCESS_ID: process_id,
             XENO_SESSION_LOCAL_REPOSITORY_PATH: repo,
             XENO_SESSION_REMOTE_CLONE_URL: clone_url,
             XENO_SESSION_REMOTE_PATH: remote_path,
-            XENO_SESSION_REMOTE_IS_FILE: remote_is_file
+            XENO_SESSION_REMOTE_IS_FILE: remote_is_file,
+            XENO_SESSION_SYNC_STATUS: sync_status
         })
 
     return results

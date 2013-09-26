@@ -9,7 +9,8 @@ except ImportError:
 
 # xeno imports
 from xeno.core.sessions import get_sessions, XENO_SESSION_LOCAL_PROCESS_ID, \
-    XENO_SESSION_REMOTE_CLONE_URL, XENO_SESSION_REMOTE_PATH
+    XENO_SESSION_REMOTE_CLONE_URL, XENO_SESSION_REMOTE_PATH, \
+    XENO_SESSION_SYNC_STATUS
 
 
 def main():
@@ -28,11 +29,12 @@ def main():
         # Compute user/hostname
         username = clone_url.username + '@' if clone_url.username else ''
 
-        print('{0}: {1} ({2}{3})'.format(
+        print('{0}: {1} ({2}{3}) - {4}'.format(
             session[XENO_SESSION_LOCAL_PROCESS_ID],
             session[XENO_SESSION_REMOTE_PATH],
             username,
-            clone_url.hostname
+            clone_url.hostname,
+            session[XENO_SESSION_SYNC_STATUS]
         ))
 
     # All done

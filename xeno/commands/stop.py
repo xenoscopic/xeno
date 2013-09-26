@@ -76,7 +76,7 @@ def main():
             # NOTE: Make sure to use process_id and NOT pid since pid will be 0
             # for stop all
             os.kill(process_id, signal.SIGTERM)
-            
+
             # If we're not ending all sessions, we must have stopped the
             # requested one, so bail
             if not args.all:
