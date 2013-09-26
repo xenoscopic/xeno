@@ -164,6 +164,8 @@ For more detailed information, please see the
 
 TODO List
 ---------
+- Add option to kill off sessions automatically after some period of inactivity
+- Make session ids nicer, add central registry to avoid confusing PIDs
 - Add core.debug setting
 - Modify output to use Python's logging system
 - Replace local polling with `watchdog` or a similar file-monitoring library
