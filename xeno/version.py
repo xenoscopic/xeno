@@ -2,8 +2,14 @@
 import sys
 from os import linesep
 
+# Setuptools imports
+import pkg_resources
+
+
 # Version constants
-XENO_VERSION = (0, 0, 3)
+XENO_VERSION = tuple((int(v)
+                      for v
+                      in pkg_resources.require('xeno')[0].version.split('.')))
 XENO_MIN_PYTHON_VERSION = (2, 7, 0)
 
 
