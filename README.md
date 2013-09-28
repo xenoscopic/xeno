@@ -154,7 +154,9 @@ Also, if you want in-session launch capabilities, you need to do:
 The `xeno ssh` command is just a pass-through to SSH, but it monitors SSH's
 console output for initialization tokens.  If this is a little too
 tin-foil-hat-inducing for you, you can still use the local launch mechanism
-without losing any sleep.
+without losing any sleep.  For more information, please see the
+[FAQ](https://github.com/havoc-io/xeno/wiki/FAQs#isnt-it-insecure-to-use-the-xeno-ssh-wrapper)
+on this topic.
 
 
 More Information
