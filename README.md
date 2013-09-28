@@ -61,14 +61,14 @@ To view help information for a particular subcommand, use:
 
 xeno supports the following subcommands:
 
-- __edit__: Starts editing sessions
-- __config__: Manages xeno configuration information
-- __ssh__: A pass-through to 'ssh' which monitors console output for session
+- [__edit__](https://github.com/havoc-io/xeno/wiki/edit): Starts editing sessions
+- [__config__](https://github.com/havoc-io/xeno/wiki/config): Manages xeno configuration information
+- [__ssh__](https://github.com/havoc-io/xeno/wiki/ssh): A pass-through to 'ssh' which monitors console output for session
   initialization
-- __list__: Lists active xeno sessions
-- __resume__: Resumes a xeno session (open your editor on the local copy)
-- __stop__: Stops a xeno session and cleans up local/remote resources
-- __sync__: Syncs a xeno session with the remote copy (automatically run as a
+- [__list__](https://github.com/havoc-io/xeno/wiki/list): Lists active xeno sessions
+- [__resume__](https://github.com/havoc-io/xeno/wiki/resume): Resumes a xeno session (open your editor on the local copy)
+- [__stop__](https://github.com/havoc-io/xeno/wiki/stop): Stops a xeno session and cleans up local/remote resources
+- [__sync__](https://github.com/havoc-io/xeno/wiki/sync): Syncs a xeno session with the remote copy (automatically run as a
   daemon when using xeno edit to do periodic synchronization, and also available
   to manually push/pull changes on-demand)
 
