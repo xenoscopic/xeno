@@ -162,7 +162,8 @@ on this topic.
 More Information
 ----------------
 For more detailed information, please see the
-[xeno wiki](https://github.com/havoc-io/xeno/wiki).
+[xeno wiki](https://github.com/havoc-io/xeno/wiki) and
+[FAQs](https://github.com/havoc-io/xeno/wiki/FAQs).
 
 
 TODO List
