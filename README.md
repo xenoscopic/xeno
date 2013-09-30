@@ -117,7 +117,7 @@ will pass through all command-line arguments through to the subcommand.
 Requirements
 ------------
 - POSIX-based operating system (I'll happily review pull requests for Windows)
-- Python 2.7+ (Including Python 3.x, although please report bugs)
+- Python 2.7+ (Including Python 3.2+, although please report bugs)
 - Git
 - OpenSSH
 
