@@ -24,6 +24,7 @@ and it will have exactly the same effect!
 <sup>
 1: For in-session launches, you must use `xeno ssh`, a VERY thin wrapper around
 SSH which monitors console output for initialization messages
+([FAQ](https://github.com/havoc-io/xeno/wiki/FAQs#isnt-it-insecure-to-use-the-xeno-ssh-wrapper)).
 </sup>
 
 
