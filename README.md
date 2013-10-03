@@ -169,6 +169,7 @@ For more detailed information, please see the
 
 TODO List
 ---------
+- Add --all option to sync
 - Add option to kill off sessions automatically after some period of inactivity
 - Make session ids nicer, add central registry to avoid confusing PIDs
 - Add core.debug setting
