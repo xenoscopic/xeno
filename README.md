@@ -172,6 +172,8 @@ TODO List
 - Add --all option to sync
 - Add option to kill off sessions automatically after some period of inactivity
 - Make session ids nicer, add central registry to avoid confusing PIDs
+- Perhaps alternatively, make resume accept a string argument and do a search
+  for the best-matching path.  In the case of ambiguity, require a session id.
 - Add core.debug setting
 - Modify output to use Python's logging system
 - Replace local polling with `watchdog` or a similar file-monitoring library
