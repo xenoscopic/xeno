@@ -169,6 +169,8 @@ For more detailed information, please see the
 
 TODO List
 ---------
+- Make xeno work with tmux/screen.  At least with tmux, xeno-init messages come
+  across every time the buffer is refreshed and new sessions are launched.
 - Add --all option to sync
 - Add option to kill off sessions automatically after some period of inactivity
 - Make session ids nicer, add central registry to avoid confusing PIDs
