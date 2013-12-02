@@ -1,6 +1,7 @@
 # System imports
 import os
 import subprocess
+import shlex
 from sys import exit
 
 # xeno imports
@@ -47,4 +48,4 @@ def run_editor_on_local_path(local_path, exit_on_no_editor=True):
             return None
 
     # Launch the editor and wait for it to finish
-    return subprocess.call([editor, local_path])
+    return subprocess.call(shlex.split(editor) + [local_path])
