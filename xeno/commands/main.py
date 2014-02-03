@@ -80,7 +80,7 @@ def parse_arguments():
     # requested help, then we should pass the help flag through to the
     # subcommand.
     if known_args.help:
-        unknown_args = ['-h'] + unknown_args
+        unknown_args = unknown_args + ['-h']
 
     return known_args, unknown_args
 
