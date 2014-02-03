@@ -25,6 +25,7 @@ and it will have exactly the same effect!
 1: For in-session launches, you must use `xeno ssh`, a VERY thin wrapper around
 SSH which monitors console output for initialization messages
 ([FAQ](https://github.com/havoc-io/xeno/wiki/FAQs#isnt-it-insecure-to-use-the-xeno-ssh-wrapper)).
+Note that this also does not currently work inside tmux or screen.
 </sup>
 
 
@@ -157,7 +158,8 @@ console output for initialization tokens.  If this is a little too
 tin-foil-hat-inducing for you, you can still use the local launch mechanism
 without losing any sleep.  For more information, please see the
 [FAQ](https://github.com/havoc-io/xeno/wiki/FAQs#isnt-it-insecure-to-use-the-xeno-ssh-wrapper)
-on this topic.
+on this topic.  Please note that in-session launches do not work from inside
+tmux or screen.
 
 
 More Information
