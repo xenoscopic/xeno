@@ -1,5 +1,8 @@
 xeno
 ====
+
+[![Build Status](https://travis-ci.org/havoc-io/xeno.png?branch=master)](https://travis-ci.org/havoc-io/xeno)
+
 [xeno](https://xeno.io/) is a tool that enables remote file and folder editing
 over SSH using your local text editor of choice, be it command line or
 GUI-based.
