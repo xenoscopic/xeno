@@ -6,3 +6,5 @@ python:
 # for now just try to install
 install: "pip install ."
 # TODO: Add some unit tests
+# for now, just check version support
+script: "xeno --version"

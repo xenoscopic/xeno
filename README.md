@@ -173,6 +173,8 @@ TODO List
 ---------
 - Make xeno work with tmux/screen.  At least with tmux, xeno-init messages come
   across every time the buffer is refreshed and new sessions are launched.
+- Try to make `!` flags work with .gitignore (will likely have to pass on
+  command line)
 - Add --all option to sync
 - Add option to kill off sessions automatically after some period of inactivity
 - Make session ids nicer, add central registry to avoid confusing PIDs
