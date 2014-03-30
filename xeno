@@ -1,0 +1,189 @@
+#!/bin/sh
+
+# Help constants
+USAGE="usage: xeno <subcommand> [arguments]
+
+synchronous(ish) remote file and folder editing
+
+The most commonly used subcommands are:
+  edit              start a xeno editing session
+  list              list xeno editing sessions
+  resume            resume a xeno editing session
+  stop              stop a xeno editing session
+  sync              manually synchronize a xeno editing session
+  ssh               start a xeno-aware SSH session
+  config            edit xeno configuration
+  daemon            start the xeno daemon
+
+To see help information for a subcommand, use 'xeno <subcommand> --help'
+"
+
+USAGE_CONFIG="usage: xeno config [-h|--help] [-c|--clear] [key] [value]
+
+view/edit xeno configuration information
+
+positional arguments:
+  key               the configuration key to view/set/clear
+  value             the value to set for the configuration
+
+optional arguments:
+  -h, --help        show this message and exit
+  -c, --clear       clear the value associated with the key
+"
+
+
+# Empty subcommand handler
+xeno () {
+  # Print usage and bail
+  echo "$USAGE"
+  exit 1
+}
+
+
+# 'edit' subcommand handler
+xeno_edit () {
+  # All done
+  exit 0
+}
+
+
+# 'list' subcommand handler
+xeno_list () {
+  # All done
+  exit 0
+}
+
+
+# 'resume' subcommand handler
+xeno_resume () {
+  # All done
+  exit 0
+}
+
+
+# 'stop' subcommand handler
+xeno_stop () {
+  # All done
+  exit 0
+}
+
+
+# 'sync' subcommand handler
+xeno_sync () {
+  # All done
+  exit 0
+}
+
+
+# 'ssh' subcommand handler
+xeno_ssh () {
+  # All done
+  exit 0
+}
+
+
+# 'config' subcommand handler
+xeno_config () {
+  # Constants
+  xeno_config_file="$HOME/.xeno.conf"
+
+  # Parse arguments
+  mode="print"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_CONFIG"
+        exit 0
+        ;;
+      --help)
+        echo "$USAGE_CONFIG"
+        exit 0
+        ;;
+      -c)
+        mode="clear" ;;
+      --clear)
+        clear="clear" ;;
+      *)
+        if [ -z "$key" ]; then
+          key="$arg"
+          if [ "$mode" != "clear" ]; then
+            mode="get"
+          fi
+        elif [ -z "$value" ]; then
+          value="$arg"
+          # We don't care if clear is set here, because we'll overwrite the
+          # value anyway
+          mode="set"
+        else
+          echo "error: invalid positional argument: $arg"
+          echo "$USAGE_CONFIG"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  # Handle based on mode
+  if [ "$mode" == "print" ]; then
+    cat "$xeno_config_file"
+  elif [ "$mode" == "clear" ]; then
+    if [ -z "$key" ]; then
+      echo "error: no key specified on clear"
+      echo "$USAGE_CONFIG"
+      exit 1
+    fi
+    git config --file "$xeno_config_file" --unset "$key"
+  elif [ "$mode" == "get" ]; then
+    git config --file "$xeno_config_file" "$key"
+  elif [ "$mode" == "set" ]; then
+    git config --file "$xeno_config_file" "$key" "$value"
+  fi
+
+  # All done
+  exit 0
+}
+
+
+# 'daemon' subcommand handler
+xeno_daemon () {
+  # All done
+  exit 0
+}
+
+
+# Run the appropriate subcommand
+case "$#" in
+  0)
+    xeno ;;
+  *)
+    # Grab the subcommand name
+    subcommand="$1"
+    # Remove the xeno argument
+    shift
+    # Dispatch to the appropriate subcommand
+    case "$subcommand" in
+      edit)
+        xeno_edit "$@" ;;
+      list)
+        xeno_list "$@" ;;
+      resume)
+        xeno_resume "$@" ;;
+      stop)
+        xeno_stop "$@" ;;
+      sync)
+        xeno_sync "$@" ;;
+      ssh)
+        xeno_ssh "$@" ;;
+      config)
+        xeno_config "$@" ;;
+      daemon)
+        xeno_daemon "$@" ;;
+      *)
+        xeno ;;
+    esac
+esac
