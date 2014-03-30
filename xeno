@@ -32,6 +32,28 @@ optional arguments:
 "
 
 
+# xeno constants
+XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
+XENO_WORKING_DIRECTORY="$HOME/.xeno"
+
+
+# Check to make sure the configuration file and working directory exist
+if [ ! -f "$XENO_CONFIGURATION_FILE" ]; then
+  if [ -e "$XENO_CONFIGURATION_FILE" ]; then
+    echo "error: configuration path exists and is not a file"
+    exit 1
+  fi
+  touch "$XENO_CONFIGURATION_FILE"
+fi
+if [ ! -d "$XENO_WORKING_DIRECTORY" ]; then
+  if [ -e "$XENO_WORKING_DIRECTORY" ]; then
+    echo "error: working path exists and is not a directory"
+    exit 1
+  fi
+  mkdir -p "$XENO_WORKING_DIRECTORY"
+fi
+
+
 # Empty subcommand handler
 xeno () {
   # Print usage and bail
@@ -85,7 +107,7 @@ xeno_ssh () {
 # 'config' subcommand handler
 xeno_config () {
   # Constants
-  xeno_config_file="$HOME/.xeno.conf"
+  XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
 
   # Parse arguments
   mode="print"
@@ -130,18 +152,25 @@ xeno_config () {
 
   # Handle based on mode
   if [ "$mode" == "print" ]; then
-    cat "$xeno_config_file"
+    cat "$XENO_CONFIGURATION_FILE"
   elif [ "$mode" == "clear" ]; then
     if [ -z "$key" ]; then
       echo "error: no key specified on clear"
       echo "$USAGE_CONFIG"
       exit 1
     fi
-    git config --file "$xeno_config_file" --unset "$key"
+    # NOTE: git config's --unset flag will leave empty section headers behind,
+    # and when a new value for that section header is added later on, the empty
+    # (and now duplicate) section header remains!  This is a known issue and has
+    # been classified by the Git maintainers as "not a bug":
+    # https://bugzilla.redhat.com/show_bug.cgi?id=452397
+    # For now, I think we can live with it, but maybe in the future we can do
+    # something fancy with sed after unsetting the key.
+    git config --file "$XENO_CONFIGURATION_FILE" --unset "$key"
   elif [ "$mode" == "get" ]; then
-    git config --file "$xeno_config_file" "$key"
+    git config --file "$XENO_CONFIGURATION_FILE" "$key"
   elif [ "$mode" == "set" ]; then
-    git config --file "$xeno_config_file" "$key" "$value"
+    git config --file "$XENO_CONFIGURATION_FILE" "$key" "$value"
   fi
 
   # All done
