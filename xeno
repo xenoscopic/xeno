@@ -56,12 +56,24 @@ optional arguments:
   -a, --all             resume all sessions
 "
 
+USAGE_STOP="usage: xeno stop [-h|--help] [-a|--all] [session]
+
+stop an editing session
+
+positional arguments:
+  session               the session id to stop (see 'xeno list')
+
+optional arguments:
+  -h, --help            show this message and exit
+  -a, --all             stop all sessions
+"
+
 USAGE_SYNC="usage: xeno sync [-h|--help] [-a|--all] [-f|--force] [session]
 
 manually synchronize an editing session
 
 positional arguments:
-  session               the session id to resume (see 'xeno list')
+  session               the session id to sync (see 'xeno list')
 
 optional arguments:
   -h, --help            show this message and exit
@@ -495,6 +507,8 @@ xeno_resume () {
   session_index=1
   for s in $(list_sessions); do
     if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      # Resume
+
       # Launch the editor
       launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$s")
 
@@ -523,6 +537,110 @@ xeno_resume () {
 
 # 'stop' subcommand handler
 xeno_stop () {
+  # Parse arguments
+  mode="single"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_STOP"
+        exit 0
+        ;;
+      --help)
+        echo "$USAGE_STOP"
+        exit 0
+        ;;
+      -a)
+        mode="all" ;;
+      --all)
+        mode="all" ;;
+      -f)
+        force="force" ;;
+      --force)
+        force="force" ;;
+      *)
+        if [ -z "$session" ]; then
+          session="$arg"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_STOP"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a session was specified
+  if [ "$mode" = "single" -a -z "$session" ]; then
+    echo "error: no session specified"
+    echo "$USAGE_STOP"
+    exit 1
+  fi
+
+  # Loop through to find/resume the session
+  session_index=1
+  for s in $(list_sessions); do
+    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      # Stop
+
+      # Compute the repository path
+      repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+
+      # Compute and parse the remote repository specification
+      location=$(cd "$repository_path" && git config --get remote.origin.url)
+      user=$(echo "$location" | grep @ | cut -d@ -f1)
+      remaining=$(echo "$location" | sed s/^$user@//)
+      separators=$(echo "$remaining" | sed s/[^:]//g)
+      if [ "$separators" = "" ]; then
+        host=""
+        port=""
+        path="$remaining"
+      elif [ "$separators" = ":" ]; then
+        host=$(echo "$remaining" | cut -d: -f1)
+        port=""
+        path=$(echo "$remaining" | cut -d: -f2)
+      else
+        host=$(echo "$remaining" | cut -d: -f1)
+        port=$(echo "$remaining" | cut -d: -f2)
+        path=$(echo "$remaining" | cut -d: -f3)
+      fi
+
+      # Format user and port specifications
+      if [ ! -z "$user" ]; then
+        user="$user@"
+      fi
+      if [ ! -z "$port" ]; then
+        ssh_port="-p $port"
+      fi
+
+      # Remove the remote repository
+      ssh $ssh_port $user$host "rm -rf '$path'"
+
+      # Remove the local repository
+      rm -rf "$repository_path"
+
+      # Mark ourselves as having found a session
+      found="found"
+
+      # If we took care of the target session, we're done
+      if [ "$mode" = "single" ]; then
+        break
+      fi
+    fi
+    session_index=$((session_index + 1))
+  done
+
+  # Check if we found a session
+  if [ -z "$found" ]; then
+    echo "error: unable to find session: $session"
+    echo "$USAGE_STOP"
+    exit 1
+  fi
+
   # All done
   exit 0
 }
