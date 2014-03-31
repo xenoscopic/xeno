@@ -26,10 +26,21 @@ edit locations with xeno
 positional arguments:
   path_or_remote        the path to edit, either as a local path or remote
                         specification
+
 optional arguments:
   -h, --help            show this message and exit
   -i, --ignore <path>   add an ignored remote path
 "
+
+
+USAGE_LIST="usage: xeno-list [-h|--help]
+
+list current xeno sessions
+
+optional arguments:
+  -h, --help            show this message and exit
+"
+
 
 USAGE_CONFIG="usage: xeno config [-h|--help] [-c|--clear] [key] [value]
 
@@ -48,9 +59,10 @@ optional arguments:
 # xeno constants
 XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
 XENO_WORKING_DIRECTORY="$HOME/.xeno"
+XENO_LOCAL_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/local"
+XENO_REMOTE_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/remote"
 
-
-# Check to make sure the configuration file and working directory exist
+# Check to make sure the configuration file and working directories exist
 if [ ! -f "$XENO_CONFIGURATION_FILE" ]; then
   if [ -e "$XENO_CONFIGURATION_FILE" ]; then
     echo "error: configuration path exists and is not a file"
@@ -64,6 +76,20 @@ if [ ! -d "$XENO_WORKING_DIRECTORY" ]; then
     exit 1
   fi
   mkdir -p "$XENO_WORKING_DIRECTORY"
+fi
+if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
+  if [ -e "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
+    echo "error: local sessions path exists and is not a directory"
+    exit 1
+  fi
+  mkdir -p "$XENO_LOCAL_SESSION_DIRECTORY"
+fi
+if [ ! -d "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
+  if [ -e "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
+    echo "error: remote sessions path exists and is not a directory"
+    exit 1
+  fi
+  mkdir -p "$XENO_REMOTE_SESSION_DIRECTORY"
 fi
 
 
@@ -92,11 +118,6 @@ launch_editor () {
 
 # Function to compute canonical paths portably
 canonical_path () {
-  # Make sure it exists
-  if [ ! -e "$1" ]; then
-    return
-  fi
-
   # If it's the root path, just return
   if [ "$1" = "/" ]; then
     echo "/"
@@ -109,6 +130,11 @@ canonical_path () {
   # Compute the directory name
   canonical_path_dirname=$(dirname "$canonical_path_result")
   canonical_path_basename=$(basename "$canonical_path_result")
+
+  # If the parent directory doesn't exist, abort
+  if [ ! -d "$canonical_path_dirname" ]; then
+    return
+  fi
 
   # Watch out for cases of '.', which should have their basename set to ''
   if [ "$canonical_path_basename" == "." ]; then
@@ -126,6 +152,12 @@ canonical_path () {
 
   # Get full path
   echo "$canonical_path_dirname/$canonical_path_basename"
+}
+
+
+# Function to list sessions
+list_sessions () {
+  ls "$XENO_LOCAL_SESSION_DIRECTORY" | grep '^[0-9a-z]\{40,40\}$'
 }
 
 
@@ -233,7 +265,7 @@ xeno_edit () {
       session_id=$(echo "$session_id" | sed 's/^.* //')
 
       # Calculate the repository path
-      repository_path="$XENO_WORKING_DIRECTORY/$session_id"
+      repository_path="$XENO_REMOTE_SESSION_DIRECTORY/$session_id"
 
       # Expand the path to its full canonical value
       path=$(canonical_path "$path")
@@ -322,11 +354,16 @@ xeno_edit () {
     fi
 
     # Clone the remote repository
-    git clone "$user$host$git_port$repository_path" \
-              "$XENO_WORKING_DIRECTORY/$repository_name"
+    git clone --quiet "$user$host$git_port:$repository_path" \
+      "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
+
+    # Store the remote path
+    git config \
+        --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+        xeno.location "$location"
 
     # Launch the local editor on the clone
-    launch_editor "$XENO_WORKING_DIRECTORY/$repository_name"
+    launch_editor "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
   fi
 
   # All done
@@ -336,6 +373,40 @@ xeno_edit () {
 
 # 'list' subcommand handler
 xeno_list () {
+  # Parse arguments
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_LIST"
+        exit 0
+        ;;
+      --help)
+        echo "$USAGE_LIST"
+        exit 0
+        ;;
+      *)
+        echo "error: invalid argument: $arg"
+        echo "$USAGE_LIST"
+        exit 1
+        ;;
+    esac
+  done
+
+  # Loop through sessions
+  session_index=1
+  for s in $(list_sessions); do
+    location=$(git config \
+                   --file="$XENO_LOCAL_SESSION_DIRECTORY/$s/.git/config" \
+                   xeno.location)
+    echo "$session_index: $location"
+    session_index=$((session_index + 1))
+  done
+
   # All done
   exit 0
 }
