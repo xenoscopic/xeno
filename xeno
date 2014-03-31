@@ -18,7 +18,8 @@ The most commonly used subcommands are:
 To see help information for a subcommand, use 'xeno <subcommand> --help'
 "
 
-USAGE_EDIT="usage: xeno-edit [-h|--help] [[username@]hostname:[port:]]path
+
+USAGE_EDIT="usage: xeno edit [-h|--help] [[username@]hostname:[port:]]path
                  [-i|--ignore <path>]
 
 edit locations with xeno
@@ -33,12 +34,25 @@ optional arguments:
 "
 
 
-USAGE_LIST="usage: xeno-list [-h|--help]
+USAGE_LIST="usage: xeno list [-h|--help]
 
 list current xeno sessions
 
 optional arguments:
   -h, --help            show this message and exit
+"
+
+
+USAGE_RESUME="usage: xeno resume [-h|--help] [-a|--all] [session]
+
+resume an existing editing session
+
+positional arguments:
+  session               the session id to resume (see 'xeno list')
+
+optional arguments:
+  -h, --help            show this message and exit
+  -a, --all             resume all sessions
 "
 
 
@@ -422,6 +436,58 @@ xeno_list () {
 
 # 'resume' subcommand handler
 xeno_resume () {
+  # Parse arguments
+  mode="single"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_RESUME"
+        exit 0
+        ;;
+      --help)
+        echo "$USAGE_RESUME"
+        exit 0
+        ;;
+      -a)
+        mode="all" ;;
+      --all)
+        mode="all" ;;
+      *)
+        if [ -z "$session" ]; then
+          session="$arg"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_RESUME"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a session was specified
+  if [ "$mode" = "single" -a -z "$session" ]; then
+    echo "error: no session specified"
+    echo "$USAGE_RESUME"
+    exit 1
+  fi
+
+  # Loop through to find/resume the session
+  session_index=1
+  for s in $(list_sessions); do
+    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$s")
+      if [ "$mode" = "single" ]; then
+        break
+      fi
+    fi
+    session_index=$((session_index + 1))
+  done
+
   # All done
   exit 0
 }
