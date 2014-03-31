@@ -56,6 +56,23 @@ optional arguments:
 "
 
 
+USAGE_SYNC="usage: xeno sync [-h|--help] [-a|--all] [-f|--force] [session]
+
+manually synchronize an editing session
+
+positional arguments:
+  session               the session id to resume (see 'xeno list')
+
+optional arguments:
+  -h, --help            show this message and exit
+  -a, --all             synchronize all sessions
+  -f, --force           by default, the sync command only synchronizes
+                        session(s) if there are local changes - use this flag to
+                        synchronize regardless of whether or not there are local
+                        changes
+"
+
+
 USAGE_CONFIG="usage: xeno config [-h|--help] [-c|--clear] [key] [value]
 
 view/edit xeno configuration information
@@ -313,15 +330,14 @@ xeno_edit () {
       echo "$ignore_lines" >> "$repository_path/info/exclude"
 
       # Add all initial files
-      git --work-tree "$work_tree" --git-dir "$repository_path" \
-          add --all "$work_tree"
+      $(cd "$repository_path" && git add --all "$work_tree")
 
       # Create the first commit
-      git --work-tree "$work_tree" --git-dir "$repository_path" \
-          commit --allow-empty --quiet --author "xeno <xeno@xeno>" -m "xeno"
+      $(cd "$repository_path" && git commit --allow-empty --quiet \
+                                     --author "xeno <xeno@xeno>" -m "xeno")
 
       # Create the incoming branch
-      git --work-tree "$work_tree" --git-dir "$repository_path" branch incoming
+      $(cd "$repository_path" && git branch incoming)
 
       # Set up the pre-receive hook.  This will commit any changes on the remote
       # end since we will likely do a pull after pushing local changes and we
@@ -480,7 +496,10 @@ xeno_resume () {
   session_index=1
   for s in $(list_sessions); do
     if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      # Launch the editor
       launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$s")
+
+      # If we took care of the target session, we're done
       if [ "$mode" = "single" ]; then
         break
       fi
@@ -502,6 +521,85 @@ xeno_stop () {
 
 # 'sync' subcommand handler
 xeno_sync () {
+  # Parse arguments
+  mode="single"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_SYNC"
+        exit 0
+        ;;
+      --help)
+        echo "$USAGE_SYNC"
+        exit 0
+        ;;
+      -a)
+        mode="all" ;;
+      --all)
+        mode="all" ;;
+      -f)
+        force="force" ;;
+      --force)
+        force="force" ;;
+      *)
+        if [ -z "$session" ]; then
+          session="$arg"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_SYNC"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a session was specified
+  if [ "$mode" = "single" -a -z "$session" ]; then
+    echo "error: no session specified"
+    echo "$USAGE_SYNC"
+    exit 1
+  fi
+
+  # Loop through to find/resume the session
+  session_index=1
+  for s in $(list_sessions); do
+    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      # Synchronize
+
+      # Compute the repository path
+      repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+
+      # Add any local changes or create a dummy commit if we're forcing things
+      uncommitted=$(cd "$repository_path" && git status --porcelain)
+      if [ ! -z "$uncommitted" -o ! -z "$force" ]; then
+        $(cd "$repository_path" && git add --all "$repository_path")
+        $(cd "$repository_path" && git commit --allow-empty --quiet \
+                                       --author "xeno <xeno@xeno>" -m "xeno")
+      fi
+
+      # If we have pending commits, push them
+      unpushed=$(cd "$repository_path" && git log --pretty=oneline \
+                                              --abbrev-commit \
+                                              origin/master..HEAD)
+      if [ ! -z "$unpushed" ]; then
+        $(cd "$repository_path" && git push --quiet origin master:incoming)
+        $(cd "$repository_path" && git pull --quiet --commit \
+                                       --strategy recursive -X ours)
+      fi
+
+      # If we took care of the target session, we're done
+      if [ "$mode" = "single" ]; then
+        break
+      fi
+    fi
+    session_index=$((session_index + 1))
+  done
+
   # All done
   exit 0
 }
