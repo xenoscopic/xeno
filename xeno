@@ -1,7 +1,11 @@
 #!/bin/sh
 
+# Version constants
+XENO_VERSION="1.0.0"
+
+
 # Help constants
-USAGE="usage: xeno <subcommand> [arguments]
+USAGE="usage: xeno [-v|--version] <subcommand> [arguments]
 
 synchronous(ish) remote file and folder editing
 
@@ -18,7 +22,6 @@ The most commonly used subcommands are:
 To see help information for a subcommand, use 'xeno <subcommand> --help'
 "
 
-
 USAGE_EDIT="usage: xeno edit [-h|--help] [[username@]hostname:[port:]]path
                  [-i|--ignore <path>]
 
@@ -33,7 +36,6 @@ optional arguments:
   -i, --ignore <path>   add an ignored remote path
 "
 
-
 USAGE_LIST="usage: xeno list [-h|--help]
 
 list current xeno sessions
@@ -41,7 +43,6 @@ list current xeno sessions
 optional arguments:
   -h, --help            show this message and exit
 "
-
 
 USAGE_RESUME="usage: xeno resume [-h|--help] [-a|--all] [session]
 
@@ -54,7 +55,6 @@ optional arguments:
   -h, --help            show this message and exit
   -a, --all             resume all sessions
 "
-
 
 USAGE_SYNC="usage: xeno sync [-h|--help] [-a|--all] [-f|--force] [session]
 
@@ -71,7 +71,6 @@ optional arguments:
                         synchronize regardless of whether or not there are local
                         changes
 "
-
 
 USAGE_CONFIG="usage: xeno config [-h|--help] [-c|--clear] [key] [value]
 
@@ -499,6 +498,9 @@ xeno_resume () {
       # Launch the editor
       launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$s")
 
+      # Mark ourselves as having found a session
+      found="found"
+
       # If we took care of the target session, we're done
       if [ "$mode" = "single" ]; then
         break
@@ -506,6 +508,13 @@ xeno_resume () {
     fi
     session_index=$((session_index + 1))
   done
+
+  # Check if we found a session
+  if [ -z "$found" ]; then
+    echo "error: unable to find session: $session"
+    echo "$USAGE_RESUME"
+    exit 1
+  fi
 
   # All done
   exit 0
@@ -592,6 +601,9 @@ xeno_sync () {
                                        --strategy recursive -X ours)
       fi
 
+      # Mark ourselves as having found a session
+      found="found"
+
       # If we took care of the target session, we're done
       if [ "$mode" = "single" ]; then
         break
@@ -599,6 +611,13 @@ xeno_sync () {
     fi
     session_index=$((session_index + 1))
   done
+
+  # Check if we found a session
+  if [ -z "$found" ]; then
+    echo "error: unable to find session: $session"
+    echo "$USAGE_SYNC"
+    exit 1
+  fi
 
   # All done
   exit 0
@@ -717,6 +736,14 @@ case "$#" in
         xeno_config "$@" ;;
       daemon)
         xeno_daemon "$@" ;;
+      -v)
+        echo "$XENO_VERSION"
+        exit 0
+        ;;
+      --version)
+        echo "$XENO_VERSION"
+        exit 0
+        ;;
       *)
         xeno ;;
     esac
