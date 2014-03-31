@@ -56,3 +56,11 @@ Implementation
 --------------
 
 TODO: Write
+
+
+TODO
+----
+- Implement daemon
+- Implement SSH
+- Finish README
+- Implement Travis CI testing
