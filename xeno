@@ -270,15 +270,23 @@ xeno_edit () {
       # Expand the path to its full canonical value
       path=$(canonical_path "$path")
 
-      # Determine if we're dealing with a file or directory
+      # Always use the parent directory as the work tree.  This is obviously
+      # necessary in the case of files, but in the case of directories, it gives
+      # us the benefit of bringing over the folder name that we are editing.
+      work_tree=$(dirname "$path")
+
+      # Determine if we're dealing with a file or directory, and update our
+      # info/exclude lines appropriately.  We add rules of the following form:
+      #
+      # /* # Ignore all files in the root of the work tree
+      # /*/ # Ignore all directories in the root of the work tree
+      # !/basename or !/basename/ # Unignore the target path in the work tree
       if [ -f "$path" ]; then
-        # If we're dealing with a file, then use its parent directory as the
-        # work tree and add ignore_lines for everything but the file
-        work_tree=$(dirname "$path")
-        ignore_lines="$ignore_lines*\n!$(basename $path)\n"
+        # With a file, add ignore lines for everything but the file
+        ignore_lines="$ignore_lines/*\n/*/\n!/$(basename $path)\n"
       elif [ -d "$path" ]; then
-        # If we're dealing with a directory, then use it as the work tree
-        work_tree="$path"
+        # With a directory, add ignore lines for everything but the directory
+        ignore_lines="$ignore_lines/*\n/*/\n!/$(basename $path)/\n"
       else
         echo "path does not exist or is not a file or directory: $path"
         exit 1
@@ -363,7 +371,7 @@ xeno_edit () {
         xeno.location "$location"
 
     # Launch the local editor on the clone
-    launch_editor "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
+    launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name")
   fi
 
   # All done
