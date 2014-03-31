@@ -6,16 +6,29 @@ USAGE="usage: xeno <subcommand> [arguments]
 synchronous(ish) remote file and folder editing
 
 The most commonly used subcommands are:
-  edit              start a xeno editing session
-  list              list xeno editing sessions
-  resume            resume a xeno editing session
-  stop              stop a xeno editing session
-  sync              manually synchronize a xeno editing session
-  ssh               start a xeno-aware SSH session
-  config            edit xeno configuration
-  daemon            start the xeno daemon
+  edit                  start a xeno editing session
+  list                  list xeno editing sessions
+  resume                resume a xeno editing session
+  stop                  stop a xeno editing session
+  sync                  manually synchronize a xeno editing session
+  ssh                   start a xeno-aware SSH session
+  config                edit xeno configuration
+  daemon                start the xeno daemon
 
 To see help information for a subcommand, use 'xeno <subcommand> --help'
+"
+
+USAGE_EDIT="usage: xeno-edit [-h|--help] [[username@]hostname:[port:]]path
+                 [-i|--ignore <path>]
+
+edit locations with xeno
+
+positional arguments:
+  path_or_remote        the path to edit, either as a local path or remote
+                        specification
+optional arguments:
+  -h, --help            show this message and exit
+  -i, --ignore <path>   add an ignored remote path
 "
 
 USAGE_CONFIG="usage: xeno config [-h|--help] [-c|--clear] [key] [value]
@@ -23,12 +36,12 @@ USAGE_CONFIG="usage: xeno config [-h|--help] [-c|--clear] [key] [value]
 view/edit xeno configuration information
 
 positional arguments:
-  key               the configuration key to view/set/clear
-  value             the value to set for the configuration
+  key                   the configuration key to view/set/clear
+  value                 the value to set for the configuration
 
 optional arguments:
-  -h, --help        show this message and exit
-  -c, --clear       clear the value associated with the key
+  -h, --help            show this message and exit
+  -c, --clear           clear the value associated with the key
 "
 
 
@@ -54,6 +67,68 @@ if [ ! -d "$XENO_WORKING_DIRECTORY" ]; then
 fi
 
 
+# Reads a key from the xeno configuration
+# @param key The key to read
+# @returns 
+read_config () {
+  git config --file "$XENO_CONFIGURATION_FILE" "$1"
+}
+
+
+# Function to launch editor
+launch_editor () {
+  # Try to find an appropriate editor
+  core_editor=`read_config core.editor`
+  if [ ! -z "$core_editor" ]; then
+    eval "$core_editor" "$1"
+  elif [ ! -z "$EDITOR" ]; then
+    eval "$EDITOR" "$1"
+  else
+    echo "error: no editor specified, please set the 'core.editor' setting or" \
+         "EDITOR environment variable"
+  fi
+}
+
+
+# Function to compute canonical paths portably
+canonical_path () {
+  # Make sure it exists
+  if [ ! -e "$1" ]; then
+    return
+  fi
+
+  # If it's the root path, just return
+  if [ "$1" = "/" ]; then
+    echo "/"
+    return
+  fi
+
+  # Expand tilde to home directory
+  canonical_path_result=$(echo "$1" | sed 's|^~|'"$HOME|")
+
+  # Compute the directory name
+  canonical_path_dirname=$(dirname "$canonical_path_result")
+  canonical_path_basename=$(basename "$canonical_path_result")
+
+  # Watch out for cases of '.', which should have their basename set to ''
+  if [ "$canonical_path_basename" == "." ]; then
+    canonical_path_basename=""
+  fi
+
+  # If the user was at / and asked for a canonical path of '.', return '/'
+  if [ "$canonical_path_dirname" = "/" -a -z "$canonical_path_basename" ]; then
+    echo "/"
+    return
+  fi
+
+  # Compute the full directory path
+  canonical_path_dirname=$(cd "$canonical_path_dirname" && pwd)
+
+  # Get full path
+  echo "$canonical_path_dirname/$canonical_path_basename"
+}
+
+
 # Empty subcommand handler
 xeno () {
   # Print usage and bail
@@ -64,6 +139,196 @@ xeno () {
 
 # 'edit' subcommand handler
 xeno_edit () {
+  # Create variables to store the ignore flags so that we can either write them
+  # to file or pass them on
+  ignore_lines=""
+  ignore_flags=""
+
+  # Parse arguments
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_EDIT"
+        exit 0
+        ;;
+      --help)
+        echo "$USAGE_EDIT"
+        exit 0
+        ;;
+      -i)
+        ignore_lines="${ignore_lines}${1}\n"
+        ignore_flags="${ignore_flags}-i ${1} "
+        shift # Gobble the ignore value
+        ;;
+      --ignore)
+        ignore_lines="${ignore_lines}${1}\n"
+        ignore_flags="${ignore_flags}-i ${1} "
+        shift # Gobble the ignore value
+        ;;
+      *)
+        if [ -z "$location" ]; then
+          location="$arg"
+        else
+          echo "error: invalid positional argument: $arg"
+          echo "$USAGE_EDIT"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a location was given
+  if [ -z "$location" ]; then
+    echo "error: no location specified"
+    echo "$USAGE_EDIT"
+    exit 1
+  fi
+  
+  # Parse the location
+  user=$(echo "$location" | grep @ | cut -d@ -f1)
+  remaining=$(echo "$location" | sed s/^$user@//)
+  separators=$(echo "$remaining" | sed s/[^:]//g)
+  if [ "$separators" = "" ]; then
+    host=""
+    port=""
+    path="$remaining"
+  elif [ "$separators" = ":" ]; then
+    host=$(echo "$remaining" | cut -d: -f1)
+    port=""
+    path=$(echo "$remaining" | cut -d: -f2)
+  else
+    host=$(echo "$remaining" | cut -d: -f1)
+    port=$(echo "$remaining" | cut -d: -f2)
+    path=$(echo "$remaining" | cut -d: -f3)
+  fi
+
+  # Format user and port specifications
+  if [ ! -z "$user" ]; then
+    user="$user@"
+  fi
+  if [ ! -z "$port" ]; then
+    ssh_port="-p $port"
+    git_port=":$port"
+  fi
+
+  # Check the type of path we're dealing with
+  if [ -z "$host" ]; then
+    # If it's a local path, check if we're in an SSH session or not
+    if [ -z "$SSH_CONNECTION" ]; then
+      # If we're not in an SSH session, then just launch our local editor
+      launch_editor "$path"
+    else
+      # Otherwise, we're in an SSH session, so do a remote initialization
+
+      # Create a unique session id
+      session_id=$(head -c 1024 /dev/urandom | openssl dgst -sha1)
+
+      # HACK: We use sed to strip off the "(stdin)= " prefix that some OpenSSL
+      # versions spit out
+      session_id=$(echo "$session_id" | sed 's/^.* //')
+
+      # Calculate the repository path
+      repository_path="$XENO_WORKING_DIRECTORY/$session_id"
+
+      # Expand the path to its full canonical value
+      path=$(canonical_path "$path")
+
+      # Determine if we're dealing with a file or directory
+      if [ -f "$path" ]; then
+        # If we're dealing with a file, then use its parent directory as the
+        # work tree and add ignore_lines for everything but the file
+        work_tree=$(dirname "$path")
+        ignore_lines="$ignore_lines*\n!$(basename $path)\n"
+      elif [ -d "$path" ]; then
+        # If we're dealing with a directory, then use it as the work tree
+        work_tree="$path"
+      else
+        echo "path does not exist or is not a file or directory: $path"
+        exit 1
+      fi
+
+      # Initialize the repository
+      git --work-tree "$work_tree" --git-dir "$repository_path" init --quiet
+
+      # Add our ignore files
+      echo "$ignore_lines" >> "$repository_path/info/exclude"
+
+      # Add all initial files
+      git --work-tree "$work_tree" --git-dir "$repository_path" \
+          add --all "$work_tree"
+
+      # Create the first commit
+      git --work-tree "$work_tree" --git-dir "$repository_path" \
+          commit --allow-empty --quiet --author "xeno <xeno@xeno>" -m "xeno"
+
+      # Create the incoming branch
+      git --work-tree "$work_tree" --git-dir "$repository_path" branch incoming
+
+      # Set up the pre-receive hook.  This will commit any changes on the remote
+      # end since we will likely do a pull after pushing local changes and we
+      # will want to pick these up.
+      echo '#!/bin/sh
+      # Add any uncommitted changes
+      if [ ! -z "$(git status --porcelain)" ]; then
+        git add --all "$(git config --get core.worktree)"
+        git commit --quiet --author "xeno <xeno@xeno>" -m "xeno-remote"
+      fi
+      exit 0
+      ' > "$repository_path/hooks/pre-receive"
+      chmod +x "$repository_path/hooks/pre-receive"
+
+      # Set up the post-receive hook.  This will merge the incoming branch on
+      # the remote end into master, using incoming as canonical.
+      # HACK: There is a --no-edit flag for merge, but it wasn't added til Git
+      # 1.7.10, and before that, the editor did not pop up automatically.  The
+      # GIT_MERGE_AUTOEDIT environment variable has the same effect as --no-edit
+      # and will not affect older versions of Git.
+      # HACK: The stupid merge command will not shut up, even with the --quiet
+      # flag, so manually silence it
+      echo '#!/bin/sh
+      GIT_MERGE_AUTOEDIT=no git merge incoming --quiet --commit -m \
+      "xeno-remote-merge" --strategy=recursive -X theirs 2>&1 > /dev/null
+      exit 0
+      ' > "$repository_path/hooks/post-receive"
+      chmod +x "$repository_path/hooks/post-receive"
+      
+      # Encode the repository path
+      token=$(echo "$repository_path" | openssl enc -base64 -A)
+
+      # Spit out the initialization token
+      echo "<xeno>$token</xeno>"
+    fi
+  else
+    # If it's a remote path, we need to do remote initialization
+
+    # Invoke xeno edit on the remote end and grab the remote repository path
+    token=$(ssh $ssh_port $user$host "xeno edit $path $ignore_flags" 2>&1)
+
+    # Check whether or not the remote xeno command worked
+    if [ $? != 0 ]; then
+      echo "remote error: $token"
+      exit 1
+    else
+      # Parse the initialization token to extract the remote repository path
+      repository_path=$(echo "$token" \
+                        | sed 's/<xeno>\(.*\)<\/xeno>/\1/' \
+                        | openssl enc -base64 -d -A)
+      repository_name=$(basename "$repository_path")
+    fi
+
+    # Clone the remote repository
+    git clone "$user$host$git_port$repository_path" \
+              "$XENO_WORKING_DIRECTORY/$repository_name"
+
+    # Launch the local editor on the clone
+    launch_editor "$XENO_WORKING_DIRECTORY/$repository_name"
+  fi
+
   # All done
   exit 0
 }
@@ -106,9 +371,6 @@ xeno_ssh () {
 
 # 'config' subcommand handler
 xeno_config () {
-  # Constants
-  XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
-
   # Parse arguments
   mode="print"
   while [ $# -gt 0 ]; do
@@ -151,9 +413,9 @@ xeno_config () {
   done
 
   # Handle based on mode
-  if [ "$mode" == "print" ]; then
+  if [ "$mode" = "print" ]; then
     cat "$XENO_CONFIGURATION_FILE"
-  elif [ "$mode" == "clear" ]; then
+  elif [ "$mode" = "clear" ]; then
     if [ -z "$key" ]; then
       echo "error: no key specified on clear"
       echo "$USAGE_CONFIG"
@@ -167,9 +429,9 @@ xeno_config () {
     # For now, I think we can live with it, but maybe in the future we can do
     # something fancy with sed after unsetting the key.
     git config --file "$XENO_CONFIGURATION_FILE" --unset "$key"
-  elif [ "$mode" == "get" ]; then
+  elif [ "$mode" = "get" ]; then
     git config --file "$XENO_CONFIGURATION_FILE" "$key"
-  elif [ "$mode" == "set" ]; then
+  elif [ "$mode" = "set" ]; then
     git config --file "$XENO_CONFIGURATION_FILE" "$key" "$value"
   fi
 

@@ -27,13 +27,14 @@ xeno has a *very* minimal set of system dependencies, in particular:
 
 - A POSIX-compliant operating system and shell
 - OpenSSH
+- OpenSSL
 - Git
 
-Most systems meet the POSIX and OpenSSH requirements out of the box, and Git is
-generally going to be installed on most systems of interest.  These requirements
-apply to both ends of the editing connection, though on the client side only
-OpenSSH client is required, and on the server side only OpenSSH server is
-required.
+Most systems meet the POSIX, OpenSSH, and OpenSSL requirements out of the box,
+and Git is generally going to be installed on most systems of interest.  These
+requirements apply to both ends of the editing connection, though on the client
+side only OpenSSH client is required, and on the server side only OpenSSH server
+is required.
 
 If there are issues, please let me know.  I'd like to make things work on as
 many systems as possible.
