@@ -215,6 +215,16 @@ launch_editor () {
 }
 
 
+# Function to launch editor on a local session (take's session hash as argument)
+launch_editor_on_local_session () {
+  # Grab the first item in the directory (should be the only item)
+  target_name=$(ls "$XENO_LOCAL_SESSION_DIRECTORY/$1" | sed -n 1p)
+
+  # Launch the editor
+  launch_editor "$XENO_LOCAL_SESSION_DIRECTORY/$1/$target_name"
+}
+
+
 # Function to compute canonical paths portably
 canonical_path () {
   # If it's the root path, just return
@@ -421,7 +431,7 @@ xeno_edit () {
         git add --all "$(git config --get core.worktree)"
         git commit --quiet --author "xeno <xeno@xeno>" -m "xeno-remote"
       fi
-      finish
+      exit 0
       ' > "$repository_path/hooks/pre-receive"
       chmod +x "$repository_path/hooks/pre-receive"
 
@@ -436,7 +446,7 @@ xeno_edit () {
       echo '#!/bin/sh
       GIT_MERGE_AUTOEDIT=no git merge incoming --quiet --commit -m \
       "xeno-remote-merge" --strategy=recursive -X theirs &> /dev/null
-      finish
+      exit 0
       ' > "$repository_path/hooks/post-receive"
       chmod +x "$repository_path/hooks/post-receive"
       
@@ -489,7 +499,7 @@ xeno_edit () {
       xeno.location "$user$host$git_port:$remote_path"
 
     # Launch the local editor on the clone
-    launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name")
+    launch_editor_on_local_session "$repository_name"
   fi
 
   # All done
@@ -587,7 +597,7 @@ xeno_resume () {
       # Resume
 
       # Launch the editor
-      launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$s")
+      launch_editor_on_local_session "$s"
 
       # Mark ourselves as having found a session
       found="found"
@@ -928,7 +938,7 @@ xeno_ssh_monitor () {
           xeno.location "$remote:$remote_path"
 
         # Launch the local editor on the clone
-        launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name")
+        launch_editor_on_local_session "$repository_name"
       fi
 
       # Release our lock
