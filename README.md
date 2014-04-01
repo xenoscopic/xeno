@@ -83,7 +83,8 @@ Installation
 ------------
 
 The xeno program is a portable shell script, so you can simply download it from
-here and put it somewhere in your path.
+[here](https://raw.githubusercontent.com/havoc-io/xeno-sh/master/xeno) and put
+it somewhere in your path.
 
 xeno needs to be installed on both ends of the editing connection.  You also
 need to have the installation directory in your path for both login __AND__
