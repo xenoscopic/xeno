@@ -1,6 +1,8 @@
 xeno
 ====
 
+[![Build Status](https://travis-ci.org/havoc-io/xeno-sh.png?branch=master)](https://travis-ci.org/havoc-io/xeno-sh)
+
 xeno allows you to edit files and folders on a remote computer using the editor
 on your local machine.  It synchronizes data using Git and SSH, making it robust
 to connection dropouts and easily allowing you to work offline.  Best of all, it
