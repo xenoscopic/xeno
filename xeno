@@ -112,34 +112,48 @@ XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
 XENO_WORKING_DIRECTORY="$HOME/.xeno"
 XENO_LOCAL_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/local"
 XENO_REMOTE_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/remote"
+XENO_LOCAL_FIFO_DIRECTORY="$XENO_WORKING_DIRECTORY/fifo"
 XENO_WORKING_LOCK="$HOME/.xeno.lock"
 
 
-# Acquire the xeno lock, waiting as necessary
-while :
-do
-  if mkdir "$XENO_WORKING_LOCK" &> /dev/null; then
-    break
-  else
-    # Sleep for 1 second until we get the lock
-    # TOOD: Is there some sort of polling mechanism we can use?
-    sleep 1
-  fi
-done
+# Function to acquire the global xeno lock
+lock_xeno () {
+  while :
+  do
+    if mkdir "$XENO_WORKING_LOCK" &> /dev/null; then
+      break
+    else
+      # Sleep for 1 second until we get the lock
+      # TODO: Is there some sort of polling mechanism we can use?
+      sleep 1
+    fi
+  done
+}
+
+
+# Function to release the global xeno lock
+unlock_xeno () {
+  # Remove the lock
+  rm -rf "$XENO_WORKING_LOCK"
+}
 
 
 # Function to exit normally
 finish () {
-  rm -rf "$XENO_WORKING_LOCK"
+  unlock_xeno
   exit 0
 }
 
 
 # Function to exit with an error
 die () {
-  rm -rf "$XENO_WORKING_LOCK"
+  unlock_xeno
   exit 1
 }
+
+
+# Acquire a xeno lock
+lock_xeno
 
 
 # Check to make sure the configuration file and working directories exist
@@ -170,6 +184,13 @@ if [ ! -d "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
     die
   fi
   mkdir -p "$XENO_REMOTE_SESSION_DIRECTORY"
+fi
+if [ ! -d "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
+  if [ -e "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
+    echo "error: local fifo path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_LOCAL_FIFO_DIRECTORY"
 fi
 
 
@@ -237,6 +258,14 @@ canonical_path () {
 # Function to list sessions
 list_sessions () {
   ls "$XENO_LOCAL_SESSION_DIRECTORY" | grep '^[0-9a-z]\{40,40\}$'
+}
+
+
+# Function to generate a random id
+random_id () {
+  # HACK: We use sed to strip off the "(stdin)= " prefix that some OpenSSL
+  # versions spit out
+  head -c 1024 /dev/urandom | openssl dgst -sha1 | sed 's/^.* //'
 }
 
 
@@ -337,11 +366,7 @@ xeno_edit () {
       # Otherwise, we're in an SSH session, so do a remote initialization
 
       # Create a unique session id
-      session_id=$(head -c 1024 /dev/urandom | openssl dgst -sha1)
-
-      # HACK: We use sed to strip off the "(stdin)= " prefix that some OpenSSL
-      # versions spit out
-      session_id=$(echo "$session_id" | sed 's/^.* //')
+      session_id=$(random_id)
 
       # Calculate the repository path
       repository_path="$XENO_REMOTE_SESSION_DIRECTORY/$session_id"
@@ -416,7 +441,7 @@ xeno_edit () {
       chmod +x "$repository_path/hooks/post-receive"
       
       # Encode the repository path
-      token=$(echo "$repository_path" | openssl enc -base64 -A)
+      token=$(echo "$path|$repository_path" | openssl enc -base64 -A)
 
       # Spit out the initialization token
       echo "<xeno>$token</xeno>"
@@ -424,18 +449,33 @@ xeno_edit () {
   else
     # If it's a remote path, we need to do remote initialization
 
+    # Although it's unlikely we're SSHing to the same machine, temporarily
+    # remove our lock just in case we are
+    unlock_xeno
+
     # Invoke xeno edit on the remote end and grab the remote repository path
-    token=$(ssh $ssh_port $user$host "xeno edit $path $ignore_flags" 2>&1)
+    output=$(ssh $ssh_port $user$host "xeno edit $path $ignore_flags" 2>&1)
+
+    # Now get our lock back
+    lock_xeno
+
+    # Parse the initialization token to extract the remote repository path
+    token=$(echo "$output" \
+            | grep '<xeno>.*</xeno>' \
+            | sed 's|<xeno>\(.*\)</xeno>|\1|' \
+            | openssl enc -base64 -d -A)
 
     # Check whether or not the remote xeno command worked
     if [ $? != 0 ]; then
-      echo "remote error: $token"
+      echo "remote error: $output"
+      die
+    elif [ -z "$token" ]; then
+      echo "error: unable to parse initialization token"
       die
     else
-      # Parse the initialization token to extract the remote repository path
-      repository_path=$(echo "$token" \
-                        | sed 's/<xeno>\(.*\)<\/xeno>/\1/' \
-                        | openssl enc -base64 -d -A)
+      # If it worked, parse up the initialization token
+      remote_path=$(echo "$token" | cut -d '|' -f1)
+      repository_path=$(echo "$token" | cut -d '|' -f2)
       repository_name=$(basename "$repository_path")
     fi
 
@@ -445,8 +485,8 @@ xeno_edit () {
 
     # Store the remote path
     git config \
-        --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
-        xeno.location "$location"
+      --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+      xeno.location "$user$host$git_port:$remote_path"
 
     # Launch the local editor on the clone
     launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name")
@@ -781,8 +821,129 @@ xeno_sync () {
 
 # 'ssh' subcommand handler
 xeno_ssh () {
-  # All done
-  finish
+  # Release our lock, we won't need it
+  unlock_xeno
+
+  # Parse arguments.  Instead of using our traditional "shift" trick here, we
+  # keep arguments intact so that they can be passed on to SSH.
+  i=1
+  while [ $i -le $# ]; do
+    # Grab the argument
+    arg="${!i}"
+
+    # Gobble up this argument
+    i=$(( i + 1 ))
+
+    # Try to figure out the argument
+    if [ ! -z $(echo "$arg" | grep '^-[1246AaCfgKkMNnqsTtVvXxYy]') ]; then
+      # This is a flag which doesn't not take an argument, so continue
+      continue
+    elif [ ! -z $(echo "$arg" | grep '^-[bcDeFIiLlmOoRSWw]') ]; then
+      # This is a flag which does take an argument, so gobble that and continue
+      i=$(( i + 1 ))
+      continue
+    elif [ "$arg" = "-p" ]; then
+      # This is the port argument
+      port_spec=":${!i}"
+      i=$(( i + 1 ))
+      continue
+    else
+      # This is a positional argument
+      remote_spec="$arg"
+      break
+    fi
+  done
+
+  # Create a random fifo (we use this instead of process substitution for
+  # portability) (xeno ssh-monitor will clean up the fifo after it hits EOF from
+  # SSH exiting)
+  fifo="$XENO_LOCAL_FIFO_DIRECTORY/$(random_id)"
+  mkfifo -m 600 "$fifo"
+
+  # Run the SSH monitor on the fifo
+  xeno ssh-monitor --xeno-ssh-monitor-fifo "$fifo" \
+                   --xeno-ssh-monitor-remote "$remote_spec$port_spec" &
+
+  # Run SSH, teeing its output into the fifo
+  # ssh $@ | tee "$fifo"
+  ssh $@ | tee /Users/jacob/whatever.txt
+
+  # Exit and pass SSH's exit code
+  exit $?
+}
+
+
+# 'ssh-monitor' subcommand handler
+xeno_ssh_monitor () {
+  # Release our lock, we won't need it at the moment
+  unlock_xeno
+
+  # Parse arguments
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      --xeno-ssh-monitor-fifo)
+        fifo="$1"
+        shift
+        ;;
+      --xeno-ssh-monitor-remote)
+        remote="$1"
+        shift
+        ;;
+    esac
+  done
+
+  # Read from the fifo and look for initialization lines
+  while read line < "$fifo"
+  do
+    # Check for an initialization token
+    token=$(echo "$line" \
+            | grep '<xeno>.*</xeno>' \
+            | sed 's|<xeno>\(.*\)</xeno>|\1|' \
+            | openssl enc -base64 -d -A)
+
+    # If we found one...
+    if [ ! -z "$token" ]; then
+      echo "match: $line" >> /Users/jacob/whatever
+      # Parse the token
+      remote_path=$(echo "$token" | cut -d '|' -f1)
+      repository_path=$(echo "$token" | cut -d '|' -f2)
+      repository_name=$(basename "$repository_path")
+
+      # Reacquire a lock
+      lock_xeno
+
+      # Don't clone if it already exists (stop things like screen/tmux from
+      # causing duplicates)
+      if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name" ]; then
+        # Clone the remote repository
+        git clone --quiet "$remote:$repository_path" \
+          "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
+
+        # Store the remote path
+        git config \
+          --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+          xeno.location "$remote:$remote_path"
+
+        # Launch the local editor on the clone
+        launch_editor $(ls "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name")
+      fi
+
+      # Release our lock
+      unlock_xeno
+    else
+      echo "no match: $line" >> /Users/jacob/whatever
+    fi
+  done
+
+  # Cleanup the fifo
+  rm "$fifo"
+
+  exit 0
 }
 
 
@@ -917,7 +1078,7 @@ xeno_daemon () {
     fi
 
     # Release our lock, we won't need it, since we delegate to 'xeno sync'
-    rm -rf "$XENO_WORKING_LOCK"
+    unlock_xeno
 
     # Loop
     while :
@@ -947,7 +1108,7 @@ xeno_daemon () {
 # Run the appropriate subcommand
 case "$#" in
   0)
-    xeno ;;
+    xeno_empty ;;
   *)
     # Grab the subcommand name
     subcommand="$1"
@@ -967,6 +1128,8 @@ case "$#" in
         xeno_sync "$@" ;;
       ssh)
         xeno_ssh "$@" ;;
+      ssh-monitor)
+        xeno_ssh_monitor "$@" ;;
       config)
         xeno_config "$@" ;;
       daemon)
@@ -980,6 +1143,7 @@ case "$#" in
         finish
         ;;
       *)
+        echo "error: invalid argument or subcommand: $subcommand"
         xeno_empty ;;
     esac
 esac
