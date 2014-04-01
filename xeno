@@ -152,48 +152,6 @@ die () {
 }
 
 
-# Acquire a xeno lock
-lock_xeno
-
-
-# Check to make sure the configuration file and working directories exist
-if [ ! -f "$XENO_CONFIGURATION_FILE" ]; then
-  if [ -e "$XENO_CONFIGURATION_FILE" ]; then
-    echo "error: configuration path exists and is not a file"
-    die
-  fi
-  touch "$XENO_CONFIGURATION_FILE"
-fi
-if [ ! -d "$XENO_WORKING_DIRECTORY" ]; then
-  if [ -e "$XENO_WORKING_DIRECTORY" ]; then
-    echo "error: working path exists and is not a directory"
-    die
-  fi
-  mkdir -p "$XENO_WORKING_DIRECTORY"
-fi
-if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
-  if [ -e "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
-    echo "error: local sessions path exists and is not a directory"
-    die
-  fi
-  mkdir -p "$XENO_LOCAL_SESSION_DIRECTORY"
-fi
-if [ ! -d "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
-  if [ -e "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
-    echo "error: remote sessions path exists and is not a directory"
-    die
-  fi
-  mkdir -p "$XENO_REMOTE_SESSION_DIRECTORY"
-fi
-if [ ! -d "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
-  if [ -e "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
-    echo "error: local fifo path exists and is not a directory"
-    die
-  fi
-  mkdir -p "$XENO_LOCAL_FIFO_DIRECTORY"
-fi
-
-
 # Reads a key from the xeno configuration
 read_config () {
   git config --file "$XENO_CONFIGURATION_FILE" "$1"
@@ -277,6 +235,48 @@ random_id () {
   # versions spit out
   head -c 1024 /dev/urandom | openssl dgst -sha1 | sed 's/^.* //'
 }
+
+
+# Acquire a xeno lock
+lock_xeno
+
+
+# Check to make sure the configuration file and working directories exist
+if [ ! -f "$XENO_CONFIGURATION_FILE" ]; then
+  if [ -e "$XENO_CONFIGURATION_FILE" ]; then
+    echo "error: configuration path exists and is not a file"
+    die
+  fi
+  touch "$XENO_CONFIGURATION_FILE"
+fi
+if [ ! -d "$XENO_WORKING_DIRECTORY" ]; then
+  if [ -e "$XENO_WORKING_DIRECTORY" ]; then
+    echo "error: working path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_WORKING_DIRECTORY"
+fi
+if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
+  if [ -e "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
+    echo "error: local sessions path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_LOCAL_SESSION_DIRECTORY"
+fi
+if [ ! -d "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
+  if [ -e "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
+    echo "error: remote sessions path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_REMOTE_SESSION_DIRECTORY"
+fi
+if [ ! -d "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
+  if [ -e "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
+    echo "error: local fifo path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_LOCAL_FIFO_DIRECTORY"
+fi
 
 
 # Empty subcommand handler
@@ -498,6 +498,11 @@ xeno_edit () {
       --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
       xeno.location "$user$host$git_port:$remote_path"
 
+    # Launch the daemon in case it isn't running
+    unlock_xeno
+    xeno daemon
+    lock_xeno
+
     # Launch the local editor on the clone
     launch_editor_on_local_session "$repository_name"
   fi
@@ -589,6 +594,11 @@ xeno_resume () {
     echo "$USAGE_RESUME"
     die
   fi
+
+  # Launch the daemon in case it isn't running
+  unlock_xeno
+  xeno daemon
+  lock_xeno
 
   # Loop through to find/resume the session
   session_index=1
@@ -943,6 +953,9 @@ xeno_ssh_monitor () {
 
       # Release our lock
       unlock_xeno
+
+      # Launch the daemon in case it isn't running
+      xeno daemon
     fi
   done < "$fifo"
 

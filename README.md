@@ -94,10 +94,13 @@ non-login shells).  For Zsh-like shells, this generally means an entry in
 documentation for more information.
 
 You also need to launch the xeno daemon on the local end if you want automatic
-synchronization (you do not need to run the daemon on the remote end). This can
-be accomplished using the `xeno daemon` command.  This command will not start
-another daemon if one is already running, so it is advised that you simply put
-this into your login shell initialization script.
+synchronization (you do not need to run the daemon on the remote end).  The
+`edit` (both locally and inside an SSH session) and `resume` commands will
+automatically launch the local daemon if it is not running.  You can manually
+start the daemon using the `xeno daemon` command (e.g. if you restart and then
+don't use `xeno resume`).  This command will not start another daemon if one is
+already running, so it is advised that you simply put this into your login shell
+initialization script.
 
 It is important to note that on some systems, e.g. Ubuntu, there is a statement
 in the default ~/.bashrc to prevent it from being run for non-interactive
@@ -159,8 +162,8 @@ The best way to understand xeno's implementation is to simply read it.  It's
 only about 1,200 lines of shell script, which is organized roughly as:
 
     # Constants
-    # Initialization
     # Utility functions
+    # Initialization
     # Individual command implementations
     # Main entry/command-dispatch point
 
