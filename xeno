@@ -865,8 +865,7 @@ xeno_ssh () {
                    --xeno-ssh-monitor-remote "$remote_spec$port_spec" &
 
   # Run SSH, teeing its output into the fifo
-  # ssh $@ | tee "$fifo"
-  ssh $@ | tee /Users/jacob/whatever.txt
+  ssh $@ | tee "$fifo"
 
   # Exit and pass SSH's exit code
   exit $?
@@ -898,7 +897,7 @@ xeno_ssh_monitor () {
   done
 
   # Read from the fifo and look for initialization lines
-  while read line < "$fifo"
+  while read line
   do
     # Check for an initialization token
     token=$(echo "$line" \
@@ -908,7 +907,6 @@ xeno_ssh_monitor () {
 
     # If we found one...
     if [ ! -z "$token" ]; then
-      echo "match: $line" >> /Users/jacob/whatever
       # Parse the token
       remote_path=$(echo "$token" | cut -d '|' -f1)
       repository_path=$(echo "$token" | cut -d '|' -f2)
@@ -935,10 +933,8 @@ xeno_ssh_monitor () {
 
       # Release our lock
       unlock_xeno
-    else
-      echo "no match: $line" >> /Users/jacob/whatever
     fi
-  done
+  done < "$fifo"
 
   # Cleanup the fifo
   rm "$fifo"
