@@ -10,6 +10,7 @@ USAGE="usage: xeno [-v|--version] <subcommand> [arguments]
 synchronous(ish) remote file and folder editing
 
 The most commonly used subcommands are:
+
   edit                  start a xeno editing session
   list                  list xeno editing sessions
   resume                resume a xeno editing session
@@ -120,7 +121,7 @@ XENO_WORKING_LOCK="$HOME/.xeno.lock"
 lock_xeno () {
   while :
   do
-    if mkdir "$XENO_WORKING_LOCK" &> /dev/null; then
+    if mkdir "$XENO_WORKING_LOCK" 2>&1 > /dev/null; then
       break
     else
       # Sleep for 1 second until we get the lock
@@ -205,7 +206,7 @@ canonical_path () {
   fi
 
   # Watch out for cases of '.', which should have their basename set to ''
-  if [ "$canonical_path_basename" == "." ]; then
+  if [ "$canonical_path_basename" = "." ]; then
     canonical_path_basename=""
   fi
 
@@ -341,8 +342,8 @@ xeno_edit () {
   
   # Parse the location
   user=$(echo "$location" | grep @ | cut -d@ -f1)
-  remaining=$(echo "$location" | sed s/^$user@//)
-  separators=$(echo "$remaining" | sed s/[^:]//g)
+  remaining=$(echo "$location" | sed 's/^$user@//')
+  separators=$(echo "$remaining" | sed 's/[^:]//g')
   if [ "$separators" = "" ]; then
     host=""
     port=""
@@ -490,7 +491,7 @@ xeno_edit () {
     fi
 
     # Clone the remote repository
-    git clone --quiet "$user$host$git_port:$repository_path" \
+    git clone --quiet "ssh://$user$host$git_port:$repository_path" \
       "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
     # Store the remote path
@@ -688,10 +689,11 @@ xeno_stop () {
       repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
 
       # Compute and parse the remote repository specification
-      location=$(cd "$repository_path" && git config --get remote.origin.url)
+      location=$(cd "$repository_path" \
+                 && git config --get remote.origin.url | sed 's|^ssh://||' )
       user=$(echo "$location" | grep @ | cut -d@ -f1)
-      remaining=$(echo "$location" | sed s/^$user@//)
-      separators=$(echo "$remaining" | sed s/[^:]//g)
+      remaining=$(echo "$location" | sed 's/^$user@//')
+      separators=$(echo "$remaining" | sed 's/[^:]//g')
       if [ "$separators" = "" ]; then
         host=""
         port=""
@@ -849,7 +851,7 @@ xeno_ssh () {
   i=1
   while [ $i -le $# ]; do
     # Grab the argument
-    arg="${!i}"
+    eval arg="\$$i"
 
     # Gobble up this argument
     i=$(( i + 1 ))
@@ -864,7 +866,7 @@ xeno_ssh () {
       continue
     elif [ "$arg" = "-p" ]; then
       # This is the port argument
-      port_spec=":${!i}"
+      eval port_spec=":\$$i"
       i=$(( i + 1 ))
       continue
     else
@@ -939,7 +941,7 @@ xeno_ssh_monitor () {
       # causing duplicates)
       if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name" ]; then
         # Clone the remote repository
-        git clone --quiet "$remote:$repository_path" \
+        git clone --quiet "ssh://$remote:$repository_path" \
           "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
         # Store the remote path
@@ -1081,7 +1083,7 @@ xeno_daemon () {
       # Launch with nohup to avoid killing the daemon when the tty closes, use
       # 0<&- to close stdin, and send the output to a log file
       log_file="$XENO_WORKING_DIRECTORY/daemon.log"
-      nohup xeno daemon --xeno-daemon-run 0<&- &> "$log_file" &
+      nohup xeno daemon --xeno-daemon-run 0<&- 2>&1 > "$log_file" &
     fi
   elif [ "$mode" = "run" ]; then
     # Compute our sync interval
