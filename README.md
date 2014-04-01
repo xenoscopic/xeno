@@ -100,10 +100,10 @@ You also need to launch the xeno daemon on the local end if you want automatic
 synchronization (you do not need to run the daemon on the remote end).  The
 `edit` (both locally and inside an SSH session) and `resume` commands will
 automatically launch the local daemon if it is not running.  You can manually
-start the daemon using the `xeno daemon` command (e.g. if you restart and then
-don't use `xeno resume`).  This command will not start another daemon if one is
-already running, so it is advised that you simply put this into your login shell
-initialization script.
+start the daemon using the `xeno daemon` command (e.g. if you restart your
+computer and then don't use `xeno resume`).  This command will not start another
+daemon if one is already running, so it is advised that you simply put this into
+your login shell initialization script.
 
 It is important to note that on some systems, e.g. Ubuntu, there is a statement
 in the default ~/.bashrc to prevent it from being run for non-interactive
@@ -174,7 +174,7 @@ When xeno is invoked, it will generate an out-of-work-tree Git repository on the
 remote machine to track and coordinate changes.  It installs some hooks in the
 remote repository to do some comitting/merging on the remote end every time a
 push is received from the local end.  xeno will then clone the remote
-repositor and launch your local editor on the clone.  The basic repository
+repository and launch your local editor on the clone.  The basic repository
 synchronization flow looks like:   
 
     ------------------------------------------------------------------------
