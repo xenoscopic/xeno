@@ -10,6 +10,15 @@ runs entirely in user-space, so you can set it up and use it without complicated
 kernel modules or administrative privileges.
 
 
+IMPORTANT NOTE
+--------------
+Versions of xeno prior to 1.0.0 were written in Python, and are not compatible
+with versions 1.0.0+.  If you still require access to the older Python versions,
+you can install the last one with:
+
+    pip install git+https://github.com/havoc-io/xeno.git@0.0.5
+
+
 Features and basic usage
 ------------------------
 
