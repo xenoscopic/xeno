@@ -97,47 +97,83 @@ optional arguments:
   -c, --clear           clear the value associated with the key
 "
 
+USAGE_DAEMON="usage: xeno daemon [-h|--help] [-s|--stop]
+
+launch the xeno daemon (no-op if the daemon is already running)
+
+optional arguments:
+  -h, --help            show this message and exit
+  -s, --stop            stop the existing daemon, if any
+"
+
 
 # xeno constants
 XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
 XENO_WORKING_DIRECTORY="$HOME/.xeno"
 XENO_LOCAL_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/local"
 XENO_REMOTE_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/remote"
+XENO_WORKING_LOCK="$HOME/.xeno.lock"
+
+
+# Acquire the xeno lock, waiting as necessary
+while :
+do
+  if mkdir "$XENO_WORKING_LOCK" &> /dev/null; then
+    break
+  else
+    # Sleep for 1 second until we get the lock
+    # TOOD: Is there some sort of polling mechanism we can use?
+    sleep 1
+  fi
+done
+
+
+# Function to exit normally
+finish () {
+  rm -rf "$XENO_WORKING_LOCK"
+  exit 0
+}
+
+
+# Function to exit with an error
+die () {
+  rm -rf "$XENO_WORKING_LOCK"
+  exit 1
+}
+
 
 # Check to make sure the configuration file and working directories exist
 if [ ! -f "$XENO_CONFIGURATION_FILE" ]; then
   if [ -e "$XENO_CONFIGURATION_FILE" ]; then
     echo "error: configuration path exists and is not a file"
-    exit 1
+    die
   fi
   touch "$XENO_CONFIGURATION_FILE"
 fi
 if [ ! -d "$XENO_WORKING_DIRECTORY" ]; then
   if [ -e "$XENO_WORKING_DIRECTORY" ]; then
     echo "error: working path exists and is not a directory"
-    exit 1
+    die
   fi
   mkdir -p "$XENO_WORKING_DIRECTORY"
 fi
 if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
   if [ -e "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
     echo "error: local sessions path exists and is not a directory"
-    exit 1
+    die
   fi
   mkdir -p "$XENO_LOCAL_SESSION_DIRECTORY"
 fi
 if [ ! -d "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
   if [ -e "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
     echo "error: remote sessions path exists and is not a directory"
-    exit 1
+    die
   fi
   mkdir -p "$XENO_REMOTE_SESSION_DIRECTORY"
 fi
 
 
 # Reads a key from the xeno configuration
-# @param key The key to read
-# @returns 
 read_config () {
   git config --file "$XENO_CONFIGURATION_FILE" "$1"
 }
@@ -146,7 +182,7 @@ read_config () {
 # Function to launch editor
 launch_editor () {
   # Try to find an appropriate editor
-  core_editor=`read_config core.editor`
+  core_editor=$(read_config core.editor)
   if [ ! -z "$core_editor" ]; then
     eval "$core_editor" "$1"
   elif [ ! -z "$EDITOR" ]; then
@@ -166,7 +202,8 @@ canonical_path () {
     return
   fi
 
-  # Expand tilde to home directory
+  # Expand tilde to home directory (use | as separator because $HOME will expand
+  # to contain / charcters)
   canonical_path_result=$(echo "$1" | sed 's|^~|'"$HOME|")
 
   # Compute the directory name
@@ -204,10 +241,10 @@ list_sessions () {
 
 
 # Empty subcommand handler
-xeno () {
+xeno_empty () {
   # Print usage and bail
   echo "$USAGE"
-  exit 1
+  die
 }
 
 
@@ -228,11 +265,11 @@ xeno_edit () {
     case "$arg" in
       -h)
         echo "$USAGE_EDIT"
-        exit 0
+        finish
         ;;
       --help)
         echo "$USAGE_EDIT"
-        exit 0
+        finish
         ;;
       -i)
         ignore_lines="${ignore_lines}${1}\n"
@@ -248,9 +285,9 @@ xeno_edit () {
         if [ -z "$location" ]; then
           location="$arg"
         else
-          echo "error: invalid positional argument: $arg"
+          echo "error: invalid argument: $arg"
           echo "$USAGE_EDIT"
-          exit 1
+          die
         fi
         ;;
     esac
@@ -260,7 +297,7 @@ xeno_edit () {
   if [ -z "$location" ]; then
     echo "error: no location specified"
     echo "$USAGE_EDIT"
-    exit 1
+    die
   fi
   
   # Parse the location
@@ -331,7 +368,7 @@ xeno_edit () {
         ignore_lines="$ignore_lines/*\n/*/\n!/$(basename $path)/\n"
       else
         echo "path does not exist or is not a file or directory: $path"
-        exit 1
+        die
       fi
 
       # Initialize the repository
@@ -359,7 +396,7 @@ xeno_edit () {
         git add --all "$(git config --get core.worktree)"
         git commit --quiet --author "xeno <xeno@xeno>" -m "xeno-remote"
       fi
-      exit 0
+      finish
       ' > "$repository_path/hooks/pre-receive"
       chmod +x "$repository_path/hooks/pre-receive"
 
@@ -373,8 +410,8 @@ xeno_edit () {
       # flag, so manually silence it
       echo '#!/bin/sh
       GIT_MERGE_AUTOEDIT=no git merge incoming --quiet --commit -m \
-      "xeno-remote-merge" --strategy=recursive -X theirs 2>&1 > /dev/null
-      exit 0
+      "xeno-remote-merge" --strategy=recursive -X theirs &> /dev/null
+      finish
       ' > "$repository_path/hooks/post-receive"
       chmod +x "$repository_path/hooks/post-receive"
       
@@ -393,7 +430,7 @@ xeno_edit () {
     # Check whether or not the remote xeno command worked
     if [ $? != 0 ]; then
       echo "remote error: $token"
-      exit 1
+      die
     else
       # Parse the initialization token to extract the remote repository path
       repository_path=$(echo "$token" \
@@ -416,7 +453,7 @@ xeno_edit () {
   fi
 
   # All done
-  exit 0
+  finish
 }
 
 
@@ -432,16 +469,16 @@ xeno_list () {
     case "$arg" in
       -h)
         echo "$USAGE_LIST"
-        exit 0
+        finish
         ;;
       --help)
         echo "$USAGE_LIST"
-        exit 0
+        finish
         ;;
       *)
         echo "error: invalid argument: $arg"
         echo "$USAGE_LIST"
-        exit 1
+        die
         ;;
     esac
   done
@@ -457,7 +494,7 @@ xeno_list () {
   done
 
   # All done
-  exit 0
+  finish
 }
 
 
@@ -474,11 +511,11 @@ xeno_resume () {
     case "$arg" in
       -h)
         echo "$USAGE_RESUME"
-        exit 0
+        finish
         ;;
       --help)
         echo "$USAGE_RESUME"
-        exit 0
+        finish
         ;;
       -a)
         mode="all" ;;
@@ -490,7 +527,7 @@ xeno_resume () {
         else
           echo "error: invalid argument: $arg"
           echo "$USAGE_RESUME"
-          exit 1
+          die
         fi
         ;;
     esac
@@ -500,7 +537,7 @@ xeno_resume () {
   if [ "$mode" = "single" -a -z "$session" ]; then
     echo "error: no session specified"
     echo "$USAGE_RESUME"
-    exit 1
+    die
   fi
 
   # Loop through to find/resume the session
@@ -523,15 +560,15 @@ xeno_resume () {
     session_index=$((session_index + 1))
   done
 
-  # Check if we found a session
-  if [ -z "$found" ]; then
+  # If a sessions was specified and we didn't find it, print an error
+  if [ ! -z "$session" -a -z "$found" ]; then
     echo "error: unable to find session: $session"
     echo "$USAGE_RESUME"
-    exit 1
+    die
   fi
 
   # All done
-  exit 0
+  finish
 }
 
 
@@ -548,11 +585,11 @@ xeno_stop () {
     case "$arg" in
       -h)
         echo "$USAGE_STOP"
-        exit 0
+        finish
         ;;
       --help)
         echo "$USAGE_STOP"
-        exit 0
+        finish
         ;;
       -a)
         mode="all" ;;
@@ -568,7 +605,7 @@ xeno_stop () {
         else
           echo "error: invalid argument: $arg"
           echo "$USAGE_STOP"
-          exit 1
+          die
         fi
         ;;
     esac
@@ -578,7 +615,7 @@ xeno_stop () {
   if [ "$mode" = "single" -a -z "$session" ]; then
     echo "error: no session specified"
     echo "$USAGE_STOP"
-    exit 1
+    die
   fi
 
   # Loop through to find/resume the session
@@ -634,15 +671,15 @@ xeno_stop () {
     session_index=$((session_index + 1))
   done
 
-  # Check if we found a session
-  if [ -z "$found" ]; then
+  # If a sessions was specified and we didn't find it, print an error
+  if [ ! -z "$session" -a -z "$found" ]; then
     echo "error: unable to find session: $session"
     echo "$USAGE_STOP"
-    exit 1
+    die
   fi
 
   # All done
-  exit 0
+  finish
 }
 
 
@@ -659,11 +696,11 @@ xeno_sync () {
     case "$arg" in
       -h)
         echo "$USAGE_SYNC"
-        exit 0
+        finish
         ;;
       --help)
         echo "$USAGE_SYNC"
-        exit 0
+        finish
         ;;
       -a)
         mode="all" ;;
@@ -679,7 +716,7 @@ xeno_sync () {
         else
           echo "error: invalid argument: $arg"
           echo "$USAGE_SYNC"
-          exit 1
+          die
         fi
         ;;
     esac
@@ -689,7 +726,7 @@ xeno_sync () {
   if [ "$mode" = "single" -a -z "$session" ]; then
     echo "error: no session specified"
     echo "$USAGE_SYNC"
-    exit 1
+    die
   fi
 
   # Loop through to find/resume the session
@@ -730,22 +767,22 @@ xeno_sync () {
     session_index=$((session_index + 1))
   done
 
-  # Check if we found a session
-  if [ -z "$found" ]; then
+  # If a sessions was specified and we didn't find it, print an error
+  if [ ! -z "$session" -a -z "$found" ]; then
     echo "error: unable to find session: $session"
     echo "$USAGE_SYNC"
-    exit 1
+    die
   fi
 
   # All done
-  exit 0
+  finish
 }
 
 
 # 'ssh' subcommand handler
 xeno_ssh () {
   # All done
-  exit 0
+  finish
 }
 
 
@@ -762,11 +799,11 @@ xeno_config () {
     case "$arg" in
       -h)
         echo "$USAGE_CONFIG"
-        exit 0
+        finish
         ;;
       --help)
         echo "$USAGE_CONFIG"
-        exit 0
+        finish
         ;;
       -c)
         mode="clear" ;;
@@ -784,9 +821,9 @@ xeno_config () {
           # value anyway
           mode="set"
         else
-          echo "error: invalid positional argument: $arg"
+          echo "error: invalid argument: $arg"
           echo "$USAGE_CONFIG"
-          exit 1
+          die
         fi
         ;;
     esac
@@ -799,7 +836,7 @@ xeno_config () {
     if [ -z "$key" ]; then
       echo "error: no key specified on clear"
       echo "$USAGE_CONFIG"
-      exit 1
+      die
     fi
     # NOTE: git config's --unset flag will leave empty section headers behind,
     # and when a new value for that section header is added later on, the empty
@@ -816,14 +853,94 @@ xeno_config () {
   fi
 
   # All done
-  exit 0
+  finish
 }
 
 
 # 'daemon' subcommand handler
 xeno_daemon () {
+  # Parse arguments
+  mode="launch"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_DAEMON"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_DAEMON"
+        finish
+        ;;
+      -s)
+        mode="stop" ;;
+      --stop)
+        mode="stop" ;;
+      --xeno-daemon-run)
+        mode="run" ;;
+      *)
+        echo "error: invalid argument: $arg"
+        echo "$USAGE_DAEMON"
+        die
+        ;;
+    esac
+  done
+
+  # Switch based on mode
+  if [ "$mode" = "launch" ]; then
+    # Launch a new xeno daemon if there is none already running
+    running=$(ps -ef -u $(id -u) \
+              | grep 'xeno daemon --xeno-daemon-run' \
+              | grep -v 'grep' \
+              | awk '{ print $2 }')
+    if [ -z "$running" ]; then
+      # Launch with nohup to avoid killing the daemon when the tty closes, use
+      # 0<&- to close stdin, and send the output to a log file
+      log_file="$XENO_WORKING_DIRECTORY/daemon.log"
+      nohup xeno daemon --xeno-daemon-run 0<&- &> "$log_file" &
+    fi
+  elif [ "$mode" = "run" ]; then
+    # Compute our sync interval
+    sync_interval=$(read_config sync.interval)
+    if [ -z "$sync_interval" ]; then
+      sync_interval="1"
+    fi
+
+    # Compute sync arguments
+    poll_remote=$(read_config sync.force)
+    if [ "$poll_remote" = "true" ]; then
+      sync_arguments="--force"
+    fi
+
+    # Release our lock, we won't need it, since we delegate to 'xeno sync'
+    rm -rf "$XENO_WORKING_LOCK"
+
+    # Loop
+    while :
+    do
+      # Do the sync
+      $(xeno sync --all "$sync_arguments")
+      
+      # Sleep
+      sleep "$sync_interval"
+    done
+  elif [ "$mode" = "stop" ]; then
+    # Check for an existing process
+    running=$(ps -ef -u $(id -u) \
+              | grep 'xeno daemon --xeno-daemon-run' \
+              | grep -v 'grep' \
+              | awk '{ print $2 }')
+    if [ ! -z "$running" ]; then
+      kill "$running"
+    fi
+  fi
+
   # All done
-  exit 0
+  finish
 }
 
 
@@ -856,13 +973,13 @@ case "$#" in
         xeno_daemon "$@" ;;
       -v)
         echo "$XENO_VERSION"
-        exit 0
+        finish
         ;;
       --version)
         echo "$XENO_VERSION"
-        exit 0
+        finish
         ;;
       *)
-        xeno ;;
+        xeno_empty ;;
     esac
 esac
