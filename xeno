@@ -161,12 +161,13 @@ read_config () {
 
 # Function to launch editor
 launch_editor () {
+  echo "$1"
   # Try to find an appropriate editor
   core_editor=$(read_config core.editor)
   if [ ! -z "$core_editor" ]; then
-    eval "$core_editor" "$1"
+    $core_editor "$1"
   elif [ ! -z "$EDITOR" ]; then
-    eval "$EDITOR" "$1"
+    $EDITOR "$1"
   else
     echo "error: no editor specified, please set the 'core.editor' setting or" \
          "EDITOR environment variable"
@@ -396,12 +397,13 @@ xeno_edit () {
       # /* # Ignore all files in the root of the work tree
       # /*/ # Ignore all directories in the root of the work tree
       # !/basename or !/basename/ # Unignore the target path in the work tree
+      target_name=$(basename "$path")
       if [ -f "$path" ]; then
         # With a file, add ignore lines for everything but the file
-        ignore_lines="$ignore_lines/*\n/*/\n!/$(basename $path)\n"
+        ignore_lines="$ignore_lines/*\n/*/\n!/$target_name\n"
       elif [ -d "$path" ]; then
         # With a directory, add ignore lines for everything but the directory
-        ignore_lines="$ignore_lines/*\n/*/\n!/$(basename $path)/\n"
+        ignore_lines="$ignore_lines/*\n/*/\n!/$target_name/\n"
       else
         echo "path does not exist or is not a file or directory: $path"
         die
@@ -465,12 +467,13 @@ xeno_edit () {
     unlock_xeno
 
     # Invoke xeno edit on the remote end and grab the remote repository path
-    output=$(ssh $ssh_port $user$host "xeno edit $path $ignore_flags" 2>&1)
+    output=$(ssh $ssh_port $user$host "xeno edit \"$path\" $ignore_flags" 2>&1)
 
     # Now get our lock back
     lock_xeno
 
     # Parse the initialization token to extract the remote repository path
+    echo "$output"
     token=$(echo "$output" \
             | grep '<xeno>.*</xeno>' \
             | sed 's|<xeno>\(.*\)</xeno>|\1|' \
