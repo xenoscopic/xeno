@@ -1074,7 +1074,7 @@ xeno_daemon () {
     # Compute our sync interval
     sync_interval=$(read_config sync.interval)
     if [ -z "$sync_interval" ]; then
-      sync_interval="1"
+      sync_interval="10"
     fi
 
     # Compute sync arguments
