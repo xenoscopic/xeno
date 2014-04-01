@@ -161,7 +161,6 @@ read_config () {
 
 # Function to launch editor
 launch_editor () {
-  echo "$1"
   # Try to find an appropriate editor
   core_editor=$(read_config core.editor)
   if [ ! -z "$core_editor" ]; then
@@ -473,7 +472,6 @@ xeno_edit () {
     lock_xeno
 
     # Parse the initialization token to extract the remote repository path
-    echo "$output"
     token=$(echo "$output" \
             | grep '<xeno>.*</xeno>' \
             | sed 's|<xeno>\(.*\)</xeno>|\1|' \
@@ -545,10 +543,26 @@ xeno_list () {
   # Loop through sessions
   session_index=1
   for s in $(list_sessions); do
+    # Compute the remote location
     location=$(git config \
                    --file="$XENO_LOCAL_SESSION_DIRECTORY/$s/.git/config" \
                    xeno.location)
-    echo "$session_index: $location"
+
+    # Check if there are unsynced changes
+    uncommitted=$(cd "$XENO_LOCAL_SESSION_DIRECTORY/$s" \
+                  && git status --porcelain)
+    unpushed=$(cd "$XENO_LOCAL_SESSION_DIRECTORY/$s" \
+               && git log --pretty=oneline --abbrev-commit origin/master..HEAD)
+    if [ ! -z "$uncommitted" -o ! -z "$unpushed" ]; then
+      status="unsynced"
+    else
+      status="synced"
+    fi
+    
+    # Print it
+    echo "$session_index: $location ($status)"
+
+    # Move to the next session
     session_index=$((session_index + 1))
   done
 
