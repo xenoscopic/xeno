@@ -1,7 +1,7 @@
 xeno
 ====
 
-[![Build Status](https://travis-ci.org/havoc-io/xeno-sh.png?branch=master)](https://travis-ci.org/havoc-io/xeno-sh)
+[![Build Status](https://travis-ci.org/havoc-io/xeno.png?branch=xeno-sh)](https://travis-ci.org/havoc-io/xeno)
 
 xeno allows you to edit files and folders on a remote computer using the editor
 on your local machine.  It synchronizes data using Git and SSH, making it robust
@@ -85,7 +85,7 @@ Installation
 ------------
 
 The xeno program is a portable shell script, so you can simply download it from
-[here](https://raw.githubusercontent.com/havoc-io/xeno-sh/master/xeno) and put
+[here](https://raw.githubusercontent.com/havoc-io/xeno/xeno-sh/xeno) and put
 it somewhere in your path.
 
 xeno needs to be installed on both ends of the editing connection.  You also
