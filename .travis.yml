@@ -1,0 +1,16 @@
+# Set the project language
+language: shell
+
+# Install build dependencies
+install:
+  - sudo apt-get -qq update
+  - sudo apt-get -qq install git devscripts shunit2 openssh-client openssh-server
+
+# Install externals and build
+script:
+  - checkbashisms xeno
+
+# Send notifications
+notifications:
+  email:
+    - jacob@havoc.io
