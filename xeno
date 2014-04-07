@@ -425,8 +425,8 @@ xeno_edit () {
       $(cd "$repository_path" && git add --all ":/$target_name")
 
       # Create the first commit
-      $(cd "$repository_path" && git commit --allow-empty --quiet \
-                                     --author "xeno <xeno@xeno>" -m "xeno")
+      $(cd "$repository_path" && git commit --allow-empty \
+                                     --author "xeno <xeno@xeno>" -m "xeno" > $HOME/debugit 2>&1)
 
       # Create the incoming branch
       $(cd "$repository_path" && git branch incoming)
@@ -520,6 +520,7 @@ xeno_edit () {
     $(cd $repository_path && cat info/exclude)
     $(cd $repository_path && cat config)
     echo "ssh://$user$host$git_port$repository_path"
+    cat $HOME/debugit
     git clone --quiet "ssh://$user$host$git_port$repository_path" \
       "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
