@@ -516,7 +516,7 @@ xeno_edit () {
     fi
 
     # Clone the remote repository
-    git clone --quiet "ssh://$user$host$git_port:$repository_path" \
+    git clone --quiet "ssh://$user$host$git_port$repository_path" \
       "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
     # Store the remote path
