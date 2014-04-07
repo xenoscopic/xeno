@@ -418,6 +418,11 @@ xeno_edit () {
       # Initialize the repository
       git --work-tree "$work_tree" --git-dir "$repository_path" init --quiet
 
+      # Setup author configuration for the repository so we don't have to
+      # specify --author flags everywhere
+      git config --file="$repository_path/config" user.name xeno
+      git config --file="$repository_path/config" user.email xeno@xeno
+
       # Add our ignore files
       echo "$ignore_lines" >> "$repository_path/info/exclude"
 
@@ -425,8 +430,7 @@ xeno_edit () {
       $(cd "$repository_path" && git add --all ":/$target_name")
 
       # Create the first commit
-      $(cd "$repository_path" && git commit --allow-empty \
-                                     --author "xeno <xeno@xeno>" -m "xeno" > $HOME/debugit 2>&1)
+      $(cd "$repository_path" && git commit --quiet --allow-empty -m "xeno")
 
       # Create the incoming branch
       $(cd "$repository_path" && git branch incoming)
@@ -438,7 +442,7 @@ xeno_edit () {
       # Add any uncommitted changes
       if [ ! -z "$(git status --porcelain)" ]; then
         git add --all ":/'"$target_name"'"
-        git commit --quiet --author "xeno <xeno@xeno>" -m "xeno-remote"
+        git commit --quiet -m "xeno-remote"
       fi
       exit 0
       ' > "$repository_path/hooks/pre-receive"
@@ -454,7 +458,7 @@ xeno_edit () {
       # flag, so manually silence it
       echo '#!/bin/sh
       GIT_MERGE_AUTOEDIT=no git merge incoming --quiet --commit -m \
-      "xeno-remote-merge" --strategy=recursive -X theirs &> /dev/null
+      "xeno-remote-merge" --strategy=recursive -X theirs > /dev/null 2>&1
       exit 0
       ' > "$repository_path/hooks/post-receive"
       chmod +x "$repository_path/hooks/post-receive"
@@ -516,20 +520,11 @@ xeno_edit () {
     fi
 
     # Clone the remote repository
-    echo "$(cd $repository_path && git status)"
-    echo "$(cd $repository_path && cat info/exclude)"
-    echo "$(cd $repository_path && cat config)"
-    echo "ssh://$user$host$git_port$repository_path"
-    echo "debug"
-    cat $HOME/debugit
-    echo "enddebug"
-    ls "$path"
-    cat "$path"
     git clone --quiet "ssh://$user$host$git_port$repository_path" \
       "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
-    # Setup configuration for the cloned repository (mostly necessary for info
-    # on pull commits)
+    # Setup author configuration for the cloned repository so that we don't need
+    # to specify --author flags everywhere
     git config \
       --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
       user.name xeno
@@ -863,8 +858,7 @@ xeno_sync () {
       uncommitted=$(cd "$repository_path" && git status --porcelain)
       if [ ! -z "$uncommitted" -o ! -z "$force" ]; then
         $(cd "$repository_path" && git add --all :/)
-        $(cd "$repository_path" && git commit --allow-empty --quiet \
-                                       --author "xeno <xeno@xeno>" -m "xeno")
+        $(cd "$repository_path" && git commit --allow-empty --quiet -m "xeno")
       fi
 
       # If we have pending commits, push them
