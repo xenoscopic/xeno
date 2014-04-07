@@ -467,6 +467,7 @@ xeno_edit () {
 
     # Invoke xeno edit on the remote end and grab the remote repository path
     output=$(ssh $ssh_port $user$host "xeno edit \"$path\" $ignore_flags" 2>&1)
+    status=$?
 
     # Now get our lock back
     lock_xeno
@@ -478,7 +479,7 @@ xeno_edit () {
             | openssl enc -base64 -d -A)
 
     # Check whether or not the remote xeno command worked
-    if [ $? != 0 ]; then
+    if [ $status != 0 ]; then
       echo "remote error: $output"
       die
     elif [ -z "$token" ]; then
