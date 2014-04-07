@@ -36,10 +36,10 @@ testExitCodes()
   result=$?
   assertEquals "xeno config with -c should exit with code 1" 1 ${result}
 
-  # Check that running with a long help flag results in a non-error exit code
+  # Check that running with a long clear flag results in a non-error exit code
   ./xeno --clear > /dev/null 2>&1
   result=$?
-  assertEquals "xeno with --clear should exit with code 1" 1 ${result}
+  assertEquals "xeno config with --clear should exit with code 1" 1 ${result}
 }
 
 
