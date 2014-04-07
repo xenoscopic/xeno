@@ -520,6 +520,8 @@ xeno_edit () {
     echo "$(cd $repository_path && cat info/exclude)"
     echo "$(cd $repository_path && cat config)"
     echo "ssh://$user$host$git_port$repository_path"
+    ls "$path"
+    cat "$path"
     git clone --quiet "ssh://$user$host$git_port$repository_path" \
       "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
