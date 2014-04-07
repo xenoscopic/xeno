@@ -19,6 +19,9 @@ oneTimeSetUp()
   # Create out remote content
   echo "Content Line 1\n\nContent Line 2\n\n" > "$TEST_PATH/contents"
   echo "Content Line 1 (Remote)\n\nContent Line 2 (Local)\n\n" > /tmp/expected
+
+  # Make sure that things work even if the remote path is a git repository
+  $(cd "$TEST_PATH" && git init --quiet .)
 }
 
 
@@ -32,6 +35,11 @@ testDirectoryEdit()
   # Make sure there is a single session
   result=$(xeno list | wc -l)
   assertEquals "xeno list should return a correct session count" "1" ${result}
+
+  # HACK: Sleep for a few seconds to make sure the daemon starts up.  This is
+  # inherently a race condition and a crappy solution, but I don't want to loop,
+  # and in any case the daemon should start up quickly.
+  sleep 3
 
   # Make sure the daemon is running (as startd by edit)
   result=$(ps -ef -u $(id -u) \
