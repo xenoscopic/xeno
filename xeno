@@ -458,7 +458,7 @@ xeno_edit () {
       chmod +x "$repository_path/hooks/post-receive"
       
       # Encode the repository path
-      token=$(echo "$path|$repository_path" | openssl enc -base64 -A)
+      token=$(echo "$XENO_VERSION|initialize|$path|$repository_path" | openssl enc -base64 -A)
 
       # Spit out the initialization token
       echo "<xeno>$token</xeno>"
@@ -506,8 +506,9 @@ xeno_edit () {
       die
     else
       # If it worked, parse up the initialization token
-      remote_path=$(echo "$token" | cut -d '|' -f1)
-      repository_path=$(echo "$token" | cut -d '|' -f2)
+      # TODO: Perhaps in the future do version checks here with f1/f2
+      remote_path=$(echo "$token" | cut -d '|' -f3)
+      repository_path=$(echo "$token" | cut -d '|' -f4)
       repository_name=$(basename "$repository_path")
     fi
 
