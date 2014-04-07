@@ -106,7 +106,8 @@ command (e.g. if you restart your computer and then don't use `xeno resume`).
 This command will not start another daemon if one is already running, so it is
 advised that you simply put this into your login shell initialization script.
 
-Finally, if you want in-session launch capabilities, you need to do:
+Finally, if you want in-SSH launch capabilities, you will need to install the
+xeno script in your path on the remote end, and on the local end you need to do:
 
     alias ssh="xeno ssh"
 
