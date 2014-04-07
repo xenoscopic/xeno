@@ -460,7 +460,8 @@ xeno_edit () {
       chmod +x "$repository_path/hooks/post-receive"
       
       # Encode the repository path
-      token=$(echo "$XENO_VERSION|initialize|$path|$repository_path" | openssl enc -base64 -A)
+      token=$(echo "$XENO_VERSION|initialize|$path|$repository_path" \
+              | openssl enc -base64 -A)
 
       # Spit out the initialization token
       echo "<xeno>$token</xeno>"
