@@ -78,7 +78,7 @@ xeno has a *very* minimal set of system dependencies, in particular:
 - A POSIX-compliant operating system and shell
 - OpenSSH
 - OpenSSL
-- Git
+- Git 1.7.6+
 
 Most systems meet the POSIX, OpenSSH, and OpenSSL requirements out of the box,
 and Git is generally going to be installed on most systems of interest.  These
@@ -97,35 +97,16 @@ The xeno program is a portable shell script, so you can simply download it from
 [here](https://raw.githubusercontent.com/havoc-io/xeno/xeno-sh/xeno) and put
 it somewhere in your path.
 
-xeno needs to be installed on both ends of the editing connection.  You also
-need to have the installation directory in your path for both login __AND__
-non-login shells.  For Bash-like shells, this generally means an entry in
-`~/.bash_profile` or `~/.profile` (for login shells) and `~/.bashrc` (for
-non-login shells).  For Zsh-like shells, this generally means an entry in
-`~/.zshenv` (for both login and non-login shells).  Consult your shell's
-documentation for more information.
-
 You also need to launch the xeno daemon on the local end if you want automatic
-synchronization (you do not need to run the daemon on the remote end).  The
-`edit` (both locally and inside an SSH session) and `resume` commands will
-automatically launch the local daemon if it is not running.  You can manually
-start the daemon using the `xeno daemon` command (e.g. if you restart your
-computer and then don't use `xeno resume`).  This command will not start another
-daemon if one is already running, so it is advised that you simply put this into
-your login shell initialization script.
+synchronization (you do not need to run the daemon on the remote end).  The xeno
+daemon must be run on a per-user basis.  The `edit` (both locally and inside an
+SSH session) and `resume` commands will automatically launch the local daemon if
+it is not running.  You can manually start the daemon using the `xeno daemon`
+command (e.g. if you restart your computer and then don't use `xeno resume`).
+This command will not start another daemon if one is already running, so it is
+advised that you simply put this into your login shell initialization script.
 
-It is important to note that on some systems, e.g. Ubuntu, there is a statement
-in the default ~/.bashrc to prevent it from being run for non-interactive
-shells, so you either need to remove this statement or add the path statement
-before that. It typically looks something like:
-
-    # If not running interactively, don't do anything
-    case $- in
-        *i*) ;;
-        *) return;;
-    esac
-
-Also, if you want in-session launch capabilities, you need to do:
+Finally, if you want in-session launch capabilities, you need to do:
 
     alias ssh="xeno ssh"
 
