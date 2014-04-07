@@ -516,11 +516,15 @@ xeno_edit () {
     fi
 
     # Clone the remote repository
-    $(cd $repository_path && git status)
-    $(cd $repository_path && cat info/exclude)
-    $(cd $repository_path && cat config)
+    echo "$(cd $repository_path && git status)"
+    echo "$(cd $repository_path && cat info/exclude)"
+    echo "$(cd $repository_path && cat config)"
     echo "ssh://$user$host$git_port$repository_path"
+    echo "debug"
     cat $HOME/debugit
+    echo "enddebug"
+    ls "$path"
+    cat "$path"
     git clone --quiet "ssh://$user$host$git_port$repository_path" \
       "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
