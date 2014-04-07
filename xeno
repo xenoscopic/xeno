@@ -519,6 +519,15 @@ xeno_edit () {
     git clone --quiet "ssh://$user$host$git_port$repository_path" \
       "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
+    # Setup configuration for the cloned repository (mostly necessary for info
+    # on pull commits)
+    git config \
+      --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+      user.name xeno
+    git config \
+      --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+      user.email xeno@xeno
+
     # Store the remote path
     git config \
       --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
