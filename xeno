@@ -122,7 +122,7 @@ XENO_WORKING_LOCK="$HOME/.xeno.lock"
 lock_xeno () {
   while :
   do
-    if mkdir "$XENO_WORKING_LOCK" 2>&1 > /dev/null; then
+    if mkdir "$XENO_WORKING_LOCK" > /dev/null 2>&1; then
       break
     else
       # Sleep for 1 second until we get the lock
@@ -1117,7 +1117,7 @@ xeno_daemon () {
       # Launch with nohup to avoid killing the daemon when the tty closes, use
       # 0<&- to close stdin, and send the output to a log file
       log_file="$XENO_WORKING_DIRECTORY/daemon.log"
-      nohup xeno daemon --xeno-daemon-run 0<&- 2>&1 > "$log_file" &
+      nohup xeno daemon --xeno-daemon-run 0<&- > "$log_file" 2>&1 &
     fi
   elif [ "$mode" = "run" ]; then
     # Compute our sync interval
