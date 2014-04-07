@@ -8,6 +8,7 @@ install:
 
 # Setup SSH infrastructure necessary to run tests
 before_script:
+  - scripts/ci-setup-xeno.sh
   - scripts/ci-setup-ssh.sh
 
 # Install externals and build
