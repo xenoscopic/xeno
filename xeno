@@ -108,9 +108,11 @@ optional arguments:
 "
 
 
-# xeno constants
+# xeno variables, some of which are overridable
 XENO_PATH="$0"
-XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
+if [ -z "$XENO_CONFIGURATION_FILE" ]; then
+  XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
+fi
 XENO_WORKING_DIRECTORY="$HOME/.xeno"
 XENO_LOCAL_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/local"
 XENO_REMOTE_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/remote"
