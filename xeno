@@ -420,7 +420,7 @@ xeno_edit () {
       echo "$ignore_lines" >> "$repository_path/info/exclude"
 
       # Add all initial files
-      $(cd "$repository_path" && git add --all "$target_name")
+      $(cd "$repository_path" && git add --all ":/$target_name")
 
       # Create the first commit
       $(cd "$repository_path" && git commit --allow-empty --quiet \
@@ -435,7 +435,7 @@ xeno_edit () {
       echo '#!/bin/sh
       # Add any uncommitted changes
       if [ ! -z "$(git status --porcelain)" ]; then
-        git add --all "'"$target_name"'"
+        git add --all ":/'"$target_name"'"
         git commit --quiet --author "xeno <xeno@xeno>" -m "xeno-remote"
       fi
       exit 0
@@ -840,7 +840,7 @@ xeno_sync () {
       # Add any local changes or create a dummy commit if we're forcing things
       uncommitted=$(cd "$repository_path" && git status --porcelain)
       if [ ! -z "$uncommitted" -o ! -z "$force" ]; then
-        $(cd "$repository_path" && git add --all "$repository_path")
+        $(cd "$repository_path" && git add --all :/)
         $(cd "$repository_path" && git commit --allow-empty --quiet \
                                        --author "xeno <xeno@xeno>" -m "xeno")
       fi
