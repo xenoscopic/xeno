@@ -18,6 +18,7 @@ script:
   - shunit2 scripts/ci-test-xeno-config.sh
   - shunit2 scripts/ci-test-xeno-daemon.sh
   - shunit2 scripts/ci-test-file-edit.sh
+  - shunit2 scripts/ci-test-directory-edit.sh
 
 # Send notifications
 notifications:

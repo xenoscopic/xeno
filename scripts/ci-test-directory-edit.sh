@@ -13,15 +13,16 @@ oneTimeSetUp()
   xeno config core.editor "ls"
 
   # Create our "remote" path
-  TEST_PATH="/tmp/test file"
+  TEST_PATH="/tmp/test directory"
+  mkdir "$TEST_PATH"
 
   # Create out remote content
-  echo "Content Line 1\n\nContent Line 2\n\n" > "$TEST_PATH"
+  echo "Content Line 1\n\nContent Line 2\n\n" > "$TEST_PATH/contents"
   echo "Content Line 1 (Remote)\n\nContent Line 2 (Local)\n\n" > /tmp/expected
 }
 
 
-testFileEdit()
+testDirectoryEdit()
 {
   # Start the editing session
   xeno edit "localhost:$TEST_PATH"
@@ -43,10 +44,10 @@ testFileEdit()
   xeno daemon --stop
 
   # Edit the local and remote ends
-  echo "Content Line 1 (Remote)\n\nContent Line 2\n\n" > "$TEST_PATH"
+  echo "Content Line 1 (Remote)\n\nContent Line 2\n\n" > "$TEST_PATH/contents"
   session_id=$(ls ~/.xeno/local)
   echo "Content Line 1\n\nContent Line 2 (Local)\n\n" \
-    > "$HOME/.xeno/local/$session_id/test file"
+    > "$HOME/.xeno/local/$session_id/test directory/contents"
 
   # Force a synchronization
   xeno sync --all --force
@@ -54,11 +55,11 @@ testFileEdit()
   assertEquals "xeno sync should exit with code 0" 0 ${result}
 
   # Test resultant content
-  diff "$TEST_PATH" /tmp/expected
+  diff "$TEST_PATH/contents" /tmp/expected
   result=$?
   assertEquals "merged remote content should match" 0 ${result}
 
-  diff "$HOME/.xeno/local/$session_id/test file" /tmp/expected
+  diff "$HOME/.xeno/local/$session_id/test directory/contents" /tmp/expected
   result=$?
   assertEquals "merged local content should match" 0 ${result}
 
