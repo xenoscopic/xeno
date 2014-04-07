@@ -395,20 +395,23 @@ xeno_edit () {
       # Determine if we're dealing with a file or directory, and update our
       # info/exclude lines appropriately.  We add rules of the following form:
       #
-      # /* # Ignore all files in the root of the work tree
-      # /*/ # Ignore all directories in the root of the work tree
-      # !/basename or !/basename/ # Unignore the target path in the work tree
+      #     /* # Ignore all files in the root of the work tree
+      #     /*/ # Ignore all directories in the root of the work tree
+      #     !/basename or !/basename/ # Unignore the target path
+      #
+      # NOTE: Very importantly, if we are dealing with a directory, we add a
+      # trailing "/" to the name, because if it is already a Git repository and
+      # we don't add a trailing "/", then the "git add --all" command will try
+      # to add it as a gitlink instead of adding its contents, which is NOT what
+      # we want.
       target_name=$(basename "$path")
-      if [ -f "$path" ]; then
-        # With a file, add ignore lines for everything but the file
-        ignore_lines="$ignore_lines/*\n/*/\n!/$target_name\n"
-      elif [ -d "$path" ]; then
-        # With a directory, add ignore lines for everything but the directory
-        ignore_lines="$ignore_lines/*\n/*/\n!/$target_name/\n"
-      else
+      if [ -d "$path" ]; then
+        target_name="$target_name/"
+      elif [ ! -f "$path" ]; then
         echo "path does not exist or is not a file or directory: $path"
         die
       fi
+      ignore_lines="$ignore_lines/*\n/*/\n!/$target_name\n"
 
       # Initialize the repository
       git --work-tree "$work_tree" --git-dir "$repository_path" init --quiet
@@ -417,7 +420,7 @@ xeno_edit () {
       echo "$ignore_lines" >> "$repository_path/info/exclude"
 
       # Add all initial files
-      $(cd "$repository_path" && git add --all "$work_tree")
+      $(cd "$repository_path" && git add --all "$target_name")
 
       # Create the first commit
       $(cd "$repository_path" && git commit --allow-empty --quiet \
@@ -432,7 +435,7 @@ xeno_edit () {
       echo '#!/bin/sh
       # Add any uncommitted changes
       if [ ! -z "$(git status --porcelain)" ]; then
-        git add --all "$(git config --get core.worktree)"
+        git add --all "'"$target_name"'"
         git commit --quiet --author "xeno <xeno@xeno>" -m "xeno-remote"
       fi
       exit 0
