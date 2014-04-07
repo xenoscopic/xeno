@@ -5,7 +5,7 @@ XENO_VERSION="1.0.0"
 
 
 # Help constants
-USAGE="usage: xeno [-v|--version] <subcommand> [arguments]
+USAGE="usage: xeno [-h|--help] [-v|--version] <subcommand> [arguments]
 
 synchronous(ish) remote file and folder editing
 
@@ -1199,6 +1199,14 @@ case "$#" in
         ;;
       --version)
         echo "$XENO_VERSION"
+        finish
+        ;;
+      -h)
+        echo "$USAGE"
+        finish
+        ;;
+      --help)
+        echo "$USAGE"
         finish
         ;;
       *)
