@@ -1,5 +1,6 @@
 #!/bin/sh
 
+
 # Setup SSH so that our user has passwordless entry to localhost
 sudo start ssh
 ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
