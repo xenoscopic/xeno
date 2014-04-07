@@ -45,4 +45,16 @@ testStartStop()
            | grep -v 'grep' \
            | wc -l)
   assertEquals "xeno daemon should be running" "1" ${result}
+
+  # Stop it
+  xeno daemon --stop > /dev/null 2>&1
+  result=$?
+  assertEquals "xeno daemon should stop successfully" 0 ${result}
+
+  # Make sure it stopped
+  result=$(ps -ef -u $(id -u) \
+           | grep 'xeno daemon --xeno-daemon-run' \
+           | grep -v 'grep' \
+           | wc -l)
+  assertEquals "xeno daemon should not be running" "0" ${result}
 }
