@@ -775,10 +775,13 @@ xeno_stop () {
       remaining=$(echo "$location" | sed 's/^$user@//')
       hostport=$(echo "$remaining" | cut -d/ -f1)
       separators=$(echo "$hostport" | sed 's/[^:]//g')
+      # NOTE: When a port is specified, the remote URL looks like
+      #     ssh://user@host:port:/path
+      # (i.e. there are two colons, not just 1 between host and port)
       if [ "$separators" = "" ]; then
         host="$hostport"
         port=""
-      elif [ "$separators" = ":" ]; then
+      elif [ "$separators" = "::" ]; then
         host=$(echo "$hostport" | cut -d: -f1)
         port=$(echo "$hostport" | cut -d: -f2)
       fi

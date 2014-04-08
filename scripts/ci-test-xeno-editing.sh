@@ -58,7 +58,11 @@ fileEdit()
   # Start the editing session
   if [ "$1" = "with_ssh" ]; then
     # Use this as a poor man's approximation of launching inside an SSH session
-    xeno ssh localhost "xeno edit '$TEST_CONTENT_PATH/test file'"
+    xeno ssh -p 22 localhost "xeno edit '$TEST_CONTENT_PATH/test file'"
+
+    # HACK: Sleep for a few second to make sure the clone completes (since it
+    # is happening in a background process)
+    sleep 3
   else
     xeno edit "localhost:$TEST_CONTENT_PATH/test file"
   fi
@@ -135,7 +139,12 @@ directoryEdit()
   # Start the editing session
   if [ "$1" = "with_ssh" ]; then
     # Use this as a poor man's approximation of launching inside an SSH session
-    xeno ssh localhost "xeno edit '$TEST_CONTENT_PATH' -i 'ignorable\ file'"
+    xeno ssh -p 22 localhost \
+      "xeno edit '$TEST_CONTENT_PATH' -i 'ignorable\ file'"
+
+    # HACK: Sleep for a few second to make sure the clone completes (since it
+    # is happening in a background process)
+    sleep 3
   else
     xeno edit "localhost:$TEST_CONTENT_PATH" -i "ignorable\ file"
   fi
