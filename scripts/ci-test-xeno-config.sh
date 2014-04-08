@@ -4,11 +4,28 @@
 # Tests the 'xeno config' command
 
 
-oneTimeSetUp()
+setUp()
 {
-  # Set the XENO_CONFIGURATION_PATH environment variable so that we don't
-  # pollute the user's actual configuration file
-  export XENO_CONFIGURATION_FILE="/tmp/xeno.conf"
+  # Create a directory (which we can easily remove) which will contain all of
+  # our testing content
+  TEST_PATH="/tmp/xeno-test"
+  mkdir "$TEST_PATH"
+
+  # We override the standard xeno configuration file location so that we don't
+  # clobber the user's configuration (note that this needs to be exported to
+  # propagate to xeno commands)
+  export XENO_CONFIGURATION_FILE="$TEST_PATH/xeno.conf"
+}
+
+
+tearDown()
+{
+  # Remove the testing directory
+  rm -rf "$TEST_PATH"
+
+  # Unset the configuration file (needed for xeno commands to work at beginning
+  # of next setUp)
+  unset XENO_CONFIGURATION_FILE
 }
 
 
