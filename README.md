@@ -86,7 +86,11 @@ Installation
 
 The xeno program is a portable shell script, so you can simply download it from
 [here](https://raw.githubusercontent.com/havoc-io/xeno/xeno-sh/xeno) and put
-it somewhere in your path.
+it somewhere in your path.  For example:
+
+    cd SOMEWHERE_IN_YOUR_PATH/
+    wget https://raw.githubusercontent.com/havoc-io/xeno/xeno-sh/xeno
+    chmod a+x xeno
 
 You also need to launch the xeno daemon on the local end if you want automatic
 synchronization (you do not need to run the daemon on the remote end).  The xeno
