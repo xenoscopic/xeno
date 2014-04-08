@@ -508,9 +508,9 @@ xeno_edit () {
              "~/.xeno-remote edit \"$path\" $ignore_flags" 2>&1)
     status=$?
 
-    # Check for an error on the remote end.  It could be that xeno is not there,
-    # in which case we should copy a version over.
-    if [ $status != 0 ]; then
+    # Check if the command wasn't found on the other end (code 127).  If that's
+    # the case, copy over the local version.
+    if [ $status = 127 ]; then
       echo "xeno not present on remote end, installing..."
       scp $scp_port "$XENO_PATH" $user$host:~/.xeno-remote
       echo "...done"
