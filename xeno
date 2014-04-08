@@ -773,20 +773,17 @@ xeno_stop () {
                  && git config --get remote.origin.url | sed 's|^ssh://||' )
       user=$(echo "$location" | grep @ | cut -d@ -f1)
       remaining=$(echo "$location" | sed 's/^$user@//')
-      separators=$(echo "$remaining" | sed 's/[^:]//g')
+      hostport=$(echo "$remaining" | cut -d/ -f1)
+      separators=$(echo "$hostport" | sed 's/[^:]//g')
       if [ "$separators" = "" ]; then
-        host=""
+        host="$hostport"
         port=""
-        path="$remaining"
       elif [ "$separators" = ":" ]; then
-        host=$(echo "$remaining" | cut -d: -f1)
-        port=""
-        path=$(echo "$remaining" | cut -d: -f2)
-      else
-        host=$(echo "$remaining" | cut -d: -f1)
-        port=$(echo "$remaining" | cut -d: -f2)
-        path=$(echo "$remaining" | cut -d: -f3)
+        host=$(echo "$hostport" | cut -d: -f1)
+        port=$(echo "$hostport" | cut -d: -f2)
       fi
+      path=$(echo "$remaining" | cut -d/ -f2-)
+      path="/$path"
 
       # Format user and port specifications
       if [ ! -z "$user" ]; then
