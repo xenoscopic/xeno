@@ -1024,6 +1024,15 @@ xeno_ssh_monitor () {
         git clone --quiet "ssh://$remote:$repository_path" \
           "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
+        # Setup author configuration for the cloned repository so that we don't
+        # need to specify --author flags everywhere
+        git config \
+          --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+          user.name xeno
+        git config \
+          --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+          user.email xeno@xeno
+
         # Store the remote path
         git config \
           --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
