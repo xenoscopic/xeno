@@ -1009,8 +1009,9 @@ xeno_ssh_monitor () {
     # If we found one...
     if [ ! -z "$token" ]; then
       # Parse the token
-      remote_path=$(echo "$token" | cut -d '|' -f1)
-      repository_path=$(echo "$token" | cut -d '|' -f2)
+      # TODO: Perhaps in the future do version checks here with f1/f2
+      remote_path=$(echo "$token" | cut -d '|' -f3)
+      repository_path=$(echo "$token" | cut -d '|' -f4)
       repository_name=$(basename "$repository_path")
 
       # Reacquire a lock
