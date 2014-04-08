@@ -450,7 +450,7 @@ xeno_edit () {
       git config --file="$repository_path/config" user.email xeno@xeno
 
       # Add our ignore files
-      echo "$ignore_lines" >> "$repository_path/info/exclude"
+      printf "$ignore_lines" >> "$repository_path/info/exclude"
 
       # Add all initial files
       $(cd "$repository_path" && git add --all ":/$target_name")
