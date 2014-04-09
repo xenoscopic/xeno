@@ -369,7 +369,12 @@ xeno_edit () {
     die
   fi
   
-  # Parse the location
+  # Parse the location.  The location will be of the form:
+  #
+  #     [[username@]hostname:[port:]]path
+  #
+  # We first split on the @ symbol into username/remaining, and then use the
+  # number of ':' to determine the remaining format.
   user=$(echo "$location" | grep @ | cut -d@ -f1)
   remaining=$(echo "$location" | sed 's/^$user@//')
   separators=$(echo "$remaining" | sed 's/[^:]//g')
@@ -387,7 +392,7 @@ xeno_edit () {
     path=$(echo "$remaining" | cut -d: -f3)
   fi
 
-  # Format user and port specifications
+  # Format user and port specifications for use with Git/SSH/SCP
   if [ ! -z "$user" ]; then
     user="$user@"
   fi
@@ -768,27 +773,41 @@ xeno_stop () {
       # Compute the repository path
       repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
 
-      # Compute and parse the remote repository specification
+      # Compute and parse the remote repository URL.  The URL will be of the
+      # form:
+      #
+      #     ssh://[user@]hostname[:port:]/path
+      #
+      # Note in particular that if no port is specified, there is no colon
+      # between the hostname and the path.
+      #
+      # We first split on the @ symbol into username/remaining.  We then split
+      # the potential hostname/port component and path by the first '/'.  We
+      # use the number of colons to determine the hostname/port format, and we
+      # add the '/' prefix to the parsed path since it will have been removed by
+      # the split.  We do a check to make sure that we don't end up doing a
+      # rm -rf '/' on the remote end in the event that path parsing fails.
       location=$(cd "$repository_path" \
                  && git config --get remote.origin.url | sed 's|^ssh://||' )
       user=$(echo "$location" | grep @ | cut -d@ -f1)
       remaining=$(echo "$location" | sed 's/^$user@//')
       hostport=$(echo "$remaining" | cut -d/ -f1)
       separators=$(echo "$hostport" | sed 's/[^:]//g')
-      # NOTE: When a port is specified, the remote URL looks like
-      #     ssh://user@host:port:/path
-      # (i.e. there are two colons, not just 1 between host and port)
-      if [ "$separators" = "" ]; then
-        host="$hostport"
-        port=""
-      elif [ "$separators" = "::" ]; then
+      if [ "$separators" = "::" ]; then
         host=$(echo "$hostport" | cut -d: -f1)
         port=$(echo "$hostport" | cut -d: -f2)
+      else
+        host="$hostport"
+        port=""
       fi
       path=$(echo "$remaining" | cut -d/ -f2-)
+      if [ -z "$path" ]; then
+        echo "error: unable to parse remote URL ($location) for session $s"
+        die
+      fi
       path="/$path"
 
-      # Format user and port specifications
+      # Format user and port specifications for use with Git/SSH
       if [ ! -z "$user" ]; then
         user="$user@"
       fi
