@@ -26,6 +26,15 @@
 # THE SOFTWARE.
 
 
+# Check that the version of Git installed is supported
+GIT_VERSION=$(git --version | cut -d ' ' -f3)
+MIN_GIT_VERSION="1.7.6"
+if [ "$GIT_VERSION" \< "$MIN_GIT_VERSION" ]; then
+  echo "error: Git version ($GIT_VERSION) too old, need $MIN_GIT_VERSION+"
+  exit 1
+fi
+
+
 # Version constants
 XENO_VERSION="1.0.0"
 
