@@ -776,10 +776,8 @@ xeno_stop () {
       # Compute and parse the remote repository URL.  The URL will be of the
       # form:
       #
-      #     ssh://[user@]hostname[:port:]/path
+      #     ssh://[user@]hostname[:port]/path
       #
-      # Note in particular that if no port is specified, there is no colon
-      # between the hostname and the path.
       #
       # We first split on the @ symbol into username/remaining.  We then split
       # the potential hostname/port component and path by the first '/'.  We
@@ -793,7 +791,7 @@ xeno_stop () {
       remaining=$(echo "$location" | sed 's/^$user@//')
       hostport=$(echo "$remaining" | cut -d/ -f1)
       separators=$(echo "$hostport" | sed 's/[^:]//g')
-      if [ "$separators" = "::" ]; then
+      if [ "$separators" = ":" ]; then
         host=$(echo "$hostport" | cut -d: -f1)
         port=$(echo "$hostport" | cut -d: -f2)
       else
@@ -1040,7 +1038,7 @@ xeno_ssh_monitor () {
       # causing duplicates)
       if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name" ]; then
         # Clone the remote repository
-        git clone --quiet "ssh://$remote:$repository_path" \
+        git clone --quiet "ssh://$remote$repository_path" \
           "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
 
         # Setup author configuration for the cloned repository so that we don't
