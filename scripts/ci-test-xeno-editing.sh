@@ -35,6 +35,12 @@ setUp()
   mkdir "$TEST_CONTENT_PATH/subdirectory"
   touch "$TEST_CONTENT_PATH/subdirectory/sub file"
 
+  # Make sure that things work even if the remote path is a Git repository,
+  # because by default, Git will ignore subdirectories of the work tree if they
+  # are Git repositories (due to its submodule implementation), so this tests
+  # that our ":/"-style add commands work.
+  $(cd "$TEST_CONTENT_PATH" && git init --quiet .)
+
   # Set up the expected post-sync content
   TEST_EXPECTED_PATH="$TEST_PATH/expected"
   echo "Content Line 1 (Remote)\n\nContent Line 2 (Local)\n\n" \
