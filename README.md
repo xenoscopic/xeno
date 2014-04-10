@@ -1,13 +1,16 @@
 xeno
 ====
 
-[![Build Status](https://travis-ci.org/havoc-io/xeno.png?branch=xeno-sh)](https://travis-ci.org/havoc-io/xeno)
+[![Build Status](https://travis-ci.org/havoc-io/xeno.png?branch=master)](https://travis-ci.org/havoc-io/xeno)
 
 xeno allows you to edit files and folders on a remote computer using the editor
 on your local machine.  It synchronizes data using Git and SSH, making it robust
 to connection dropouts and easily allowing you to work offline.  Best of all, it
 runs entirely in user-space, so you can set it up and use it without complicated
 kernel modules or administrative privileges.
+
+For a quick overview, please see the introductory site: 
+[https://xeno.io/](https://xeno.io/)
 
 
 Features and basic usage
@@ -58,7 +61,7 @@ xeno supports the following subcommands:
 To keep consistency, if you use the `xeno edit` command on a local path, it will
 simply open the local path in your editor.  Thus, it is often convenient to
 alias the `xeno edit` command as something like `xen`, and use the `xen` command
-as a way to consistently launch your editor, both locally and remote.
+as a way to consistently launch your editor, both locally and remotely.
 
 
 Requirements
@@ -85,11 +88,11 @@ Installation
 ------------
 
 The xeno program is a portable shell script, so you can simply download it from
-[here](https://raw.githubusercontent.com/havoc-io/xeno/xeno-sh/xeno) and put
+[here](https://raw.githubusercontent.com/havoc-io/xeno/master/xeno) and put
 it somewhere in your path.  For example:
 
     cd SOMEWHERE_IN_YOUR_PATH/
-    wget https://raw.githubusercontent.com/havoc-io/xeno/xeno-sh/xeno
+    wget https://raw.githubusercontent.com/havoc-io/xeno/master/xeno
     chmod a+x xeno
 
 You also need to launch the xeno daemon on the local end if you want automatic
