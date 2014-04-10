@@ -1,10 +1,25 @@
-language: python
-python:
-  - "2.7"
-  - "3.2"
-  - "3.3"
-# for now just try to install
-install: "pip install ."
-# TODO: Add some unit tests
-# for now, just check version support
-script: "xeno --version"
+# Set the project language
+language: shell
+
+# Install build dependencies
+install:
+  - sudo apt-get -qq update
+  - sudo apt-get -qq install git devscripts shunit2 openssh-client openssh-server
+
+# Setup SSH infrastructure necessary to run tests
+before_script:
+  - scripts/ci-setup-xeno.sh
+  - scripts/ci-setup-ssh.sh
+
+# Install externals and build
+script:
+  - checkbashisms xeno
+  - shunit2 scripts/ci-test-xeno.sh
+  - shunit2 scripts/ci-test-xeno-config.sh
+  - shunit2 scripts/ci-test-xeno-daemon.sh
+  - shunit2 scripts/ci-test-xeno-editing.sh
+
+# Send notifications
+notifications:
+  email:
+    - jacob@havoc.io

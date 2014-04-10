@@ -1,0 +1,1319 @@
+#!/bin/sh
+
+
+# Copyright (c) 2013-2014 Jacob Howard
+
+# All rights reserved.
+
+# Release under the terms of The MIT License.
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+
+# Check that the version of Git installed is supported
+GIT_VERSION=$(git --version | cut -d ' ' -f3)
+MIN_GIT_VERSION="1.7.6"
+if [ "$GIT_VERSION" \< "$MIN_GIT_VERSION" ]; then
+  echo "error: Git version ($GIT_VERSION) too old, need $MIN_GIT_VERSION+"
+  exit 1
+fi
+
+
+# Version constants
+XENO_VERSION="1.0.0"
+
+
+# Help constants
+USAGE="usage: xeno [-h|--help] [-v|--version] <subcommand> [arguments]
+
+synchronous(ish) remote file and folder editing
+
+The most commonly used subcommands are:
+
+  edit                  start a xeno editing session
+  list                  list xeno editing sessions
+  resume                resume a xeno editing session
+  stop                  stop a xeno editing session
+  sync                  manually synchronize a xeno editing session
+  ssh                   start a xeno-aware SSH session
+  config                edit xeno configuration
+  daemon                start the xeno daemon
+
+To see help information for a subcommand, use 'xeno <subcommand> --help'
+"
+
+USAGE_EDIT="usage: xeno edit [-h|--help] [[username@]hostname:[port:]]path
+                 [-i|--ignore <path>]
+
+edit locations with xeno
+
+positional arguments:
+  path_or_remote        the path to edit, either as a local path or remote
+                        specification
+
+optional arguments:
+  -h, --help            show this message and exit
+  -i, --ignore <path>   add an ignored remote path
+"
+
+USAGE_LIST="usage: xeno list [-h|--help]
+
+list current xeno sessions
+
+optional arguments:
+  -h, --help            show this message and exit
+"
+
+USAGE_RESUME="usage: xeno resume [-h|--help] [-a|--all] [session]
+
+resume an existing editing session
+
+positional arguments:
+  session               the session id to resume (see 'xeno list')
+
+optional arguments:
+  -h, --help            show this message and exit
+  -a, --all             resume all sessions
+"
+
+USAGE_STOP="usage: xeno stop [-h|--help] [-a|--all] [session]
+
+stop an editing session
+
+positional arguments:
+  session               the session id to stop (see 'xeno list')
+
+optional arguments:
+  -h, --help            show this message and exit
+  -a, --all             stop all sessions
+"
+
+USAGE_SYNC="usage: xeno sync [-h|--help] [-a|--all] [-f|--force] [session]
+
+manually synchronize an editing session
+
+positional arguments:
+  session               the session id to sync (see 'xeno list')
+
+optional arguments:
+  -h, --help            show this message and exit
+  -a, --all             synchronize all sessions
+  -f, --force           by default, the sync command only synchronizes
+                        session(s) if there are local changes - use this flag to
+                        synchronize regardless of whether or not there are local
+                        changes
+"
+
+USAGE_CONFIG="usage: xeno config [-h|--help] [-c|--clear] [key] [value]
+
+view/edit xeno configuration information
+
+positional arguments:
+  key                   the configuration key to view/set/clear
+  value                 the value to set for the configuration
+
+optional arguments:
+  -h, --help            show this message and exit
+  -c, --clear           clear the value associated with the key
+"
+
+USAGE_DAEMON="usage: xeno daemon [-h|--help] [-s|--stop]
+
+launch the xeno daemon (no-op if the daemon is already running)
+
+optional arguments:
+  -h, --help            show this message and exit
+  -s, --stop            stop the existing daemon, if any
+"
+
+
+# xeno variables, some of which are overridable
+XENO_PATH="$0"
+if [ -z "$XENO_CONFIGURATION_FILE" ]; then
+  XENO_CONFIGURATION_FILE="$HOME/.xeno.conf"
+fi
+XENO_WORKING_DIRECTORY="$HOME/.xeno"
+XENO_LOCAL_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/local"
+XENO_REMOTE_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/remote"
+XENO_LOCAL_FIFO_DIRECTORY="$XENO_WORKING_DIRECTORY/fifo"
+XENO_WORKING_LOCK="$HOME/.xeno.lock"
+XENO_HAVE_LOCK="false"
+
+
+# Function to acquire the global xeno lock
+lock_xeno () {
+  while :
+  do
+    if mkdir "$XENO_WORKING_LOCK" > /dev/null 2>&1; then
+      # Mark ourselves as having the lock
+      XENO_HAVE_LOCK="true"
+      break
+    else
+      # Sleep for 1 second until we get the lock
+      # TODO: Is there some sort of polling mechanism we can use?
+      sleep 1
+    fi
+  done
+}
+
+
+# Function to release the global xeno lock
+unlock_xeno () {
+  # Mark ourselves as not having the lock
+  # NOTE: There's a bit of a race condition here, e.g. if we mark ourselves as
+  # not having the lock and then receive a signal which doesn't remove the lock.
+  # However, it is safer to accidentally leave the lock in place than to put
+  # this statement after lock removal and risk double lock removal on a signal.
+  XENO_HAVE_LOCK="false"
+
+  # Remove the lock
+  rm -rf "$XENO_WORKING_LOCK"
+}
+
+
+# Function to handle signal cleanup
+handle_signal () {
+  # Unlock xeno if we own the lock
+  if [ "$XENO_HAVE_LOCK" = "true" ]; then
+    unlock_xeno
+  fi
+
+  # Bail
+  exit 1
+}
+
+
+# Set up signal handlers
+trap handle_signal SIGHUP SIGINT SIGTERM
+
+
+# Function to exit normally
+finish () {
+  unlock_xeno
+  exit 0
+}
+
+
+# Function to exit with an error
+die () {
+  unlock_xeno
+  exit 1
+}
+
+
+# Reads a key from the xeno configuration
+read_config () {
+  git config --file "$XENO_CONFIGURATION_FILE" "$1"
+}
+
+
+# Function to launch editor
+launch_editor () {
+  # Try to find an appropriate editor
+  core_editor=$(read_config core.editor)
+  if [ ! -z "$core_editor" ]; then
+    $core_editor "$1"
+  elif [ ! -z "$EDITOR" ]; then
+    $EDITOR "$1"
+  else
+    echo "error: no editor specified, please set the 'core.editor' setting or" \
+         "EDITOR environment variable"
+  fi
+}
+
+
+# Function to launch editor on a local session (take's session hash as argument)
+launch_editor_on_local_session () {
+  # Grab the first item in the directory (should be the only item)
+  target_name=$(ls "$XENO_LOCAL_SESSION_DIRECTORY/$1" | sed -n 1p)
+
+  # Launch the editor
+  launch_editor "$XENO_LOCAL_SESSION_DIRECTORY/$1/$target_name"
+}
+
+
+# Function to compute canonical paths portably
+canonical_path () {
+  # If it's the root path, just return
+  if [ "$1" = "/" ]; then
+    echo "/"
+    return
+  fi
+
+  # Expand tilde to home directory (use | as separator because $HOME will expand
+  # to contain / charcters)
+  canonical_path_result=$(echo "$1" | sed 's|^~|'"$HOME|")
+
+  # Compute the directory name
+  canonical_path_dirname=$(dirname "$canonical_path_result")
+  canonical_path_basename=$(basename "$canonical_path_result")
+
+  # If the parent directory doesn't exist, abort
+  if [ ! -d "$canonical_path_dirname" ]; then
+    return
+  fi
+
+  # Watch out for cases of '.', which should have their basename set to ''
+  if [ "$canonical_path_basename" = "." ]; then
+    canonical_path_basename=""
+  fi
+
+  # If the user was at / and asked for a canonical path of '.', return '/'
+  if [ "$canonical_path_dirname" = "/" -a -z "$canonical_path_basename" ]; then
+    echo "/"
+    return
+  fi
+
+  # Compute the full directory path
+  canonical_path_dirname=$(cd "$canonical_path_dirname" && pwd)
+
+  # Get full path
+  echo "$canonical_path_dirname/$canonical_path_basename"
+}
+
+
+# Function to list sessions
+list_sessions () {
+  ls "$XENO_LOCAL_SESSION_DIRECTORY" | grep '^[0-9a-z]\{40,40\}$'
+}
+
+
+# Function to generate a random id
+random_id () {
+  # HACK: We use sed to strip off the "(stdin)= " prefix that some OpenSSL
+  # versions spit out
+  head -c 1024 /dev/urandom | openssl dgst -sha1 | sed 's/^.* //'
+}
+
+
+# Acquire a xeno lock
+lock_xeno
+
+
+# Check to make sure the configuration file and working directories exist
+if [ ! -f "$XENO_CONFIGURATION_FILE" ]; then
+  if [ -e "$XENO_CONFIGURATION_FILE" ]; then
+    echo "error: configuration path exists and is not a file"
+    die
+  fi
+  touch "$XENO_CONFIGURATION_FILE"
+fi
+if [ ! -d "$XENO_WORKING_DIRECTORY" ]; then
+  if [ -e "$XENO_WORKING_DIRECTORY" ]; then
+    echo "error: working path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_WORKING_DIRECTORY"
+fi
+if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
+  if [ -e "$XENO_LOCAL_SESSION_DIRECTORY" ]; then
+    echo "error: local sessions path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_LOCAL_SESSION_DIRECTORY"
+fi
+if [ ! -d "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
+  if [ -e "$XENO_REMOTE_SESSION_DIRECTORY" ]; then
+    echo "error: remote sessions path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_REMOTE_SESSION_DIRECTORY"
+fi
+if [ ! -d "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
+  if [ -e "$XENO_LOCAL_FIFO_DIRECTORY" ]; then
+    echo "error: local fifo path exists and is not a directory"
+    die
+  fi
+  mkdir -p "$XENO_LOCAL_FIFO_DIRECTORY"
+fi
+
+
+# Empty subcommand handler
+xeno_empty () {
+  # Print usage and bail
+  echo "$USAGE"
+  die
+}
+
+
+# 'edit' subcommand handler
+xeno_edit () {
+  # Create variables to store the ignore flags so that we can either write them
+  # to file or pass them on
+  ignore_lines=""
+  ignore_flags=""
+
+  # Parse arguments
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_EDIT"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_EDIT"
+        finish
+        ;;
+      -i)
+        ignore_lines="${ignore_lines}${1}\n"
+        ignore_flags="${ignore_flags}-i ${1} "
+        shift # Gobble the ignore value
+        ;;
+      --ignore)
+        ignore_lines="${ignore_lines}${1}\n"
+        ignore_flags="${ignore_flags}-i ${1} "
+        shift # Gobble the ignore value
+        ;;
+      *)
+        if [ -z "$location" ]; then
+          location="$arg"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_EDIT"
+          die
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a location was given
+  if [ -z "$location" ]; then
+    echo "error: no location specified"
+    echo "$USAGE_EDIT"
+    die
+  fi
+  
+  # Parse the location.  The location will be of the form:
+  #
+  #     [[username@]hostname:[port:]]path
+  #
+  # We first split on the @ symbol into username/remaining, and then use the
+  # number of ':' to determine the remaining format.
+  user=$(echo "$location" | grep @ | cut -d@ -f1)
+  remaining=$(echo "$location" | sed 's/^$user@//')
+  separators=$(echo "$remaining" | sed 's/[^:]//g')
+  if [ "$separators" = "" ]; then
+    host=""
+    port=""
+    path="$remaining"
+  elif [ "$separators" = ":" ]; then
+    host=$(echo "$remaining" | cut -d: -f1)
+    port=""
+    path=$(echo "$remaining" | cut -d: -f2)
+  else
+    host=$(echo "$remaining" | cut -d: -f1)
+    port=$(echo "$remaining" | cut -d: -f2)
+    path=$(echo "$remaining" | cut -d: -f3)
+  fi
+
+  # Format user and port specifications for use with Git/SSH/SCP
+  if [ ! -z "$user" ]; then
+    user="$user@"
+  fi
+  if [ ! -z "$port" ]; then
+    ssh_port="-p $port"
+    scp_port="-P $port"
+    git_port=":$port"
+  fi
+
+  # Check the type of path we're dealing with
+  if [ -z "$host" ]; then
+    # If it's a local path, check if we're in an SSH session or not
+    if [ -z "$SSH_CONNECTION" ]; then
+      # If we're not in an SSH session, then just launch our local editor
+      launch_editor "$path"
+    else
+      # Otherwise, we're in an SSH session, so do a remote initialization
+
+      # Create a unique session id
+      session_id=$(random_id)
+
+      # Calculate the repository path
+      repository_path="$XENO_REMOTE_SESSION_DIRECTORY/$session_id"
+
+      # Expand the path to its full canonical value
+      path=$(canonical_path "$path")
+
+      # Always use the parent directory as the work tree.  This is obviously
+      # necessary in the case of files, but in the case of directories, it gives
+      # us the benefit of bringing over the folder name that we are editing.
+      work_tree=$(dirname "$path")
+
+      # Determine if we're dealing with a file or directory, and update our
+      # info/exclude lines appropriately.  We add rules of the following form:
+      #
+      #     /* # Ignore all files in the root of the work tree
+      #     /*/ # Ignore all directories in the root of the work tree
+      #     !/basename or !/basename/ # Unignore the target path
+      #
+      # NOTE: Very importantly, if we are dealing with a directory, we add a
+      # trailing "/" to the name, because if it is already a Git repository and
+      # we don't add a trailing "/", then the "git add --all" command will try
+      # to add it as a gitlink instead of adding its contents, which is NOT what
+      # we want.
+      target_name=$(basename "$path")
+      if [ -d "$path" ]; then
+        target_name="$target_name/"
+      elif [ ! -f "$path" ]; then
+        echo "path does not exist or is not a file or directory: $path"
+        die
+      fi
+      ignore_lines="$ignore_lines/*\n/*/\n!/$target_name\n"
+
+      # Initialize the repository
+      git --work-tree "$work_tree" --git-dir "$repository_path" init --quiet
+
+      # Setup author configuration for the repository so we don't have to
+      # specify --author flags everywhere
+      git config --file="$repository_path/config" user.name xeno
+      git config --file="$repository_path/config" user.email xeno@xeno
+
+      # Add our ignore files
+      printf "$ignore_lines" >> "$repository_path/info/exclude"
+
+      # Add all initial files
+      $(cd "$repository_path" && git add --all ":/$target_name")
+
+      # Create the first commit
+      $(cd "$repository_path" && git commit --quiet --allow-empty -m "xeno")
+
+      # Create the incoming branch
+      $(cd "$repository_path" && git branch incoming)
+
+      # Set up the pre-receive hook.  This will commit any changes on the remote
+      # end since we will likely do a pull after pushing local changes and we
+      # will want to pick these up.
+      echo '#!/bin/sh
+      # Add any uncommitted changes
+      if [ ! -z "$(git status --porcelain)" ]; then
+        git add --all ":/'"$target_name"'"
+        git commit --quiet -m "xeno-remote"
+      fi
+      exit 0
+      ' > "$repository_path/hooks/pre-receive"
+      chmod +x "$repository_path/hooks/pre-receive"
+
+      # Set up the post-receive hook.  This will merge the incoming branch on
+      # the remote end into master, using incoming as canonical.
+      # HACK: There is a --no-edit flag for merge, but it wasn't added til Git
+      # 1.7.10, and before that, the editor did not pop up automatically.  The
+      # GIT_MERGE_AUTOEDIT environment variable has the same effect as --no-edit
+      # and will not affect older versions of Git.
+      # HACK: The stupid merge command will not shut up, even with the --quiet
+      # flag, so manually silence it
+      echo '#!/bin/sh
+      GIT_MERGE_AUTOEDIT=no git merge incoming --quiet --commit -m \
+      "xeno-remote-merge" --strategy=recursive -X theirs > /dev/null 2>&1
+      exit 0
+      ' > "$repository_path/hooks/post-receive"
+      chmod +x "$repository_path/hooks/post-receive"
+      
+      # Encode the repository path
+      token=$(echo "$XENO_VERSION|initialize|$path|$repository_path" \
+              | openssl enc -base64 -A)
+
+      # Spit out the initialization token
+      echo "<xeno>$token</xeno>"
+    fi
+  else
+    # If it's a remote path, we need to do remote initialization
+
+    # Although it's unlikely we're SSHing to the same machine, temporarily
+    # remove our lock just in case we are
+    unlock_xeno
+
+    # Invoke xeno edit on the remote end and grab the remote repository path
+    output=$(ssh $ssh_port $user$host \
+             "~/.xeno-remote edit \"$path\" $ignore_flags" 2>&1)
+    status=$?
+
+    # Check if the command wasn't found on the other end (code 127).  If that's
+    # the case, copy over the local version.
+    if [ $status = 127 ]; then
+      echo "xeno not present on remote end, installing..."
+      scp $scp_port "$XENO_PATH" $user$host:~/.xeno-remote
+      echo "...done"
+
+      # Redo the remote invocation
+      output=$(ssh $ssh_port $user$host \
+               "~/.xeno-remote edit \"$path\" $ignore_flags" 2>&1)
+      status=$?
+    fi
+
+    # Now get our lock back
+    lock_xeno
+
+    # Parse the initialization token to extract the remote repository path
+    token=$(echo "$output" \
+            | grep '<xeno>.*</xeno>' \
+            | sed 's|<xeno>\(.*\)</xeno>|\1|' \
+            | openssl enc -base64 -d -A)
+
+    # Check whether or not the remote xeno command worked
+    if [ $status != 0 ]; then
+      echo "remote error: $output"
+      die
+    elif [ -z "$token" ]; then
+      echo "error: unable to parse initialization token"
+      die
+    else
+      # If it worked, parse up the initialization token
+      # TODO: Perhaps in the future do version checks here with f1/f2
+      remote_path=$(echo "$token" | cut -d '|' -f3)
+      repository_path=$(echo "$token" | cut -d '|' -f4)
+      repository_name=$(basename "$repository_path")
+    fi
+
+    # Clone the remote repository
+    git clone --quiet "ssh://$user$host$git_port$repository_path" \
+      "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
+
+    # Setup author configuration for the cloned repository so that we don't need
+    # to specify --author flags everywhere
+    git config \
+      --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+      user.name xeno
+    git config \
+      --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+      user.email xeno@xeno
+
+    # Store the remote path
+    git config \
+      --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+      xeno.location "$user$host$git_port:$remote_path"
+
+    # Launch the daemon in case it isn't running
+    unlock_xeno
+    xeno daemon
+    lock_xeno
+
+    # Launch the local editor on the clone
+    launch_editor_on_local_session "$repository_name"
+  fi
+
+  # All done
+  finish
+}
+
+
+# 'list' subcommand handler
+xeno_list () {
+  # Parse arguments
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_LIST"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_LIST"
+        finish
+        ;;
+      *)
+        echo "error: invalid argument: $arg"
+        echo "$USAGE_LIST"
+        die
+        ;;
+    esac
+  done
+
+  # Loop through sessions
+  session_index=1
+  for s in $(list_sessions); do
+    # Compute the remote location
+    location=$(git config \
+                   --file="$XENO_LOCAL_SESSION_DIRECTORY/$s/.git/config" \
+                   xeno.location)
+
+    # Check if there are unsynced changes
+    uncommitted=$(cd "$XENO_LOCAL_SESSION_DIRECTORY/$s" \
+                  && git status --porcelain)
+    unpushed=$(cd "$XENO_LOCAL_SESSION_DIRECTORY/$s" \
+               && git log --pretty=oneline --abbrev-commit origin/master..HEAD)
+    if [ ! -z "$uncommitted" -o ! -z "$unpushed" ]; then
+      status="unsynced"
+    else
+      status="synced"
+    fi
+    
+    # Print it
+    echo "$session_index: $location ($status)"
+
+    # Move to the next session
+    session_index=$((session_index + 1))
+  done
+
+  # All done
+  finish
+}
+
+
+# 'resume' subcommand handler
+xeno_resume () {
+  # Parse arguments
+  mode="single"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_RESUME"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_RESUME"
+        finish
+        ;;
+      -a)
+        mode="all" ;;
+      --all)
+        mode="all" ;;
+      *)
+        if [ -z "$session" ]; then
+          session="$arg"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_RESUME"
+          die
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a session was specified
+  if [ "$mode" = "single" -a -z "$session" ]; then
+    echo "error: no session specified"
+    echo "$USAGE_RESUME"
+    die
+  fi
+
+  # Launch the daemon in case it isn't running
+  unlock_xeno
+  xeno daemon
+  lock_xeno
+
+  # Loop through to find/resume the session
+  session_index=1
+  for s in $(list_sessions); do
+    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      # Resume
+
+      # Launch the editor
+      launch_editor_on_local_session "$s"
+
+      # Mark ourselves as having found a session
+      found="found"
+
+      # If we took care of the target session, we're done
+      if [ "$mode" = "single" ]; then
+        break
+      fi
+    fi
+    session_index=$((session_index + 1))
+  done
+
+  # If a sessions was specified and we didn't find it, print an error
+  if [ ! -z "$session" -a -z "$found" ]; then
+    echo "error: unable to find session: $session"
+    echo "$USAGE_RESUME"
+    die
+  fi
+
+  # All done
+  finish
+}
+
+
+# 'stop' subcommand handler
+xeno_stop () {
+  # Parse arguments
+  mode="single"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_STOP"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_STOP"
+        finish
+        ;;
+      -a)
+        mode="all" ;;
+      --all)
+        mode="all" ;;
+      -f)
+        force="force" ;;
+      --force)
+        force="force" ;;
+      *)
+        if [ -z "$session" ]; then
+          session="$arg"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_STOP"
+          die
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a session was specified
+  if [ "$mode" = "single" -a -z "$session" ]; then
+    echo "error: no session specified"
+    echo "$USAGE_STOP"
+    die
+  fi
+
+  # Loop through to find/resume the session
+  session_index=1
+  for s in $(list_sessions); do
+    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      # Stop
+
+      # Compute the repository path
+      repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+
+      # Compute and parse the remote repository URL.  The URL will be of the
+      # form:
+      #
+      #     ssh://[user@]hostname[:port]/path
+      #
+      #
+      # We first split on the @ symbol into username/remaining.  We then split
+      # the potential hostname/port component and path by the first '/'.  We
+      # use the number of colons to determine the hostname/port format, and we
+      # add the '/' prefix to the parsed path since it will have been removed by
+      # the split.  We do a check to make sure that we don't end up doing a
+      # rm -rf '/' on the remote end in the event that path parsing fails.
+      location=$(cd "$repository_path" \
+                 && git config --get remote.origin.url | sed 's|^ssh://||' )
+      user=$(echo "$location" | grep @ | cut -d@ -f1)
+      remaining=$(echo "$location" | sed 's/^$user@//')
+      hostport=$(echo "$remaining" | cut -d/ -f1)
+      separators=$(echo "$hostport" | sed 's/[^:]//g')
+      if [ "$separators" = ":" ]; then
+        host=$(echo "$hostport" | cut -d: -f1)
+        port=$(echo "$hostport" | cut -d: -f2)
+      else
+        host="$hostport"
+        port=""
+      fi
+      path=$(echo "$remaining" | cut -d/ -f2-)
+      if [ -z "$path" ]; then
+        echo "error: unable to parse remote URL ($location) for session $s"
+        die
+      fi
+      path="/$path"
+
+      # Format user and port specifications for use with Git/SSH
+      if [ ! -z "$user" ]; then
+        user="$user@"
+      fi
+      if [ ! -z "$port" ]; then
+        ssh_port="-p $port"
+      fi
+
+      # Remove the remote repository
+      ssh $ssh_port $user$host "rm -rf '$path'"
+
+      # Remove the local repository
+      rm -rf "$repository_path"
+
+      # Mark ourselves as having found a session
+      found="found"
+
+      # If we took care of the target session, we're done
+      if [ "$mode" = "single" ]; then
+        break
+      fi
+    fi
+    session_index=$((session_index + 1))
+  done
+
+  # If a sessions was specified and we didn't find it, print an error
+  if [ ! -z "$session" -a -z "$found" ]; then
+    echo "error: unable to find session: $session"
+    echo "$USAGE_STOP"
+    die
+  fi
+
+  # All done
+  finish
+}
+
+
+# 'sync' subcommand handler
+xeno_sync () {
+  # Parse arguments
+  mode="single"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_SYNC"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_SYNC"
+        finish
+        ;;
+      -a)
+        mode="all" ;;
+      --all)
+        mode="all" ;;
+      -f)
+        force="force" ;;
+      --force)
+        force="force" ;;
+      *)
+        if [ -z "$session" ]; then
+          session="$arg"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_SYNC"
+          die
+        fi
+        ;;
+    esac
+  done
+
+  # Make sure a session was specified
+  if [ "$mode" = "single" -a -z "$session" ]; then
+    echo "error: no session specified"
+    echo "$USAGE_SYNC"
+    die
+  fi
+
+  # Loop through to find/resume the session
+  session_index=1
+  for s in $(list_sessions); do
+    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+      # Synchronize
+
+      # Compute the repository path
+      repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+
+      # Add any local changes or create a dummy commit if we're forcing things
+      uncommitted=$(cd "$repository_path" && git status --porcelain)
+      if [ ! -z "$uncommitted" -o ! -z "$force" ]; then
+        $(cd "$repository_path" && git add --all :/)
+        $(cd "$repository_path" && git commit --allow-empty --quiet -m "xeno")
+      fi
+
+      # If we have pending commits, push them
+      unpushed=$(cd "$repository_path" && git log --pretty=oneline \
+                                              --abbrev-commit \
+                                              origin/master..HEAD)
+      if [ ! -z "$unpushed" ]; then
+        $(cd "$repository_path" && git push --quiet origin master:incoming)
+        $(cd "$repository_path" && git pull --quiet --commit \
+                                       --strategy recursive -X ours)
+      fi
+
+      # Mark ourselves as having found a session
+      found="found"
+
+      # If we took care of the target session, we're done
+      if [ "$mode" = "single" ]; then
+        break
+      fi
+    fi
+    session_index=$((session_index + 1))
+  done
+
+  # If a sessions was specified and we didn't find it, print an error
+  if [ ! -z "$session" -a -z "$found" ]; then
+    echo "error: unable to find session: $session"
+    echo "$USAGE_SYNC"
+    die
+  fi
+
+  # All done
+  finish
+}
+
+
+# 'ssh' subcommand handler
+xeno_ssh () {
+  # Release our lock, we won't need it
+  unlock_xeno
+
+  # Parse arguments.  Instead of using our traditional "shift" trick here, we
+  # keep arguments intact so that they can be passed on to SSH.
+  i=1
+  while [ $i -le $# ]; do
+    # Grab the argument
+    eval arg="\$$i"
+
+    # Gobble up this argument
+    i=$(( i + 1 ))
+
+    # Try to figure out the argument
+    if [ ! -z $(echo "$arg" | grep '^-[1246AaCfgKkMNnqsTtVvXxYy]') ]; then
+      # This is a flag which doesn't not take an argument, so continue
+      continue
+    elif [ ! -z $(echo "$arg" | grep '^-[bcDeFIiLlmOoRSWw]') ]; then
+      # This is a flag which does take an argument, so gobble that and continue
+      i=$(( i + 1 ))
+      continue
+    elif [ "$arg" = "-p" ]; then
+      # This is the port argument
+      eval port_spec=":\$$i"
+      i=$(( i + 1 ))
+      continue
+    else
+      # This is a positional argument
+      remote_spec="$arg"
+      break
+    fi
+  done
+
+  # Create a random fifo (we use this instead of process substitution for
+  # portability) (xeno ssh-monitor will clean up the fifo after it hits EOF from
+  # SSH exiting)
+  fifo="$XENO_LOCAL_FIFO_DIRECTORY/$(random_id)"
+  mkfifo -m 600 "$fifo"
+
+  # Run the SSH monitor on the fifo
+  xeno ssh-monitor --xeno-ssh-monitor-fifo "$fifo" \
+                   --xeno-ssh-monitor-remote "$remote_spec$port_spec" &
+
+  # Run SSH, teeing its output into the fifo
+  ssh $@ | tee "$fifo"
+
+  # Exit and pass SSH's exit code
+  exit $?
+}
+
+
+# 'ssh-monitor' subcommand handler
+xeno_ssh_monitor () {
+  # Release our lock, we won't need it at the moment
+  unlock_xeno
+
+  # Parse arguments
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      --xeno-ssh-monitor-fifo)
+        fifo="$1"
+        shift
+        ;;
+      --xeno-ssh-monitor-remote)
+        remote="$1"
+        shift
+        ;;
+    esac
+  done
+
+  # Read from the fifo and look for initialization lines
+  while read line
+  do
+    # Check for an initialization token
+    token=$(echo "$line" \
+            | grep '<xeno>.*</xeno>' \
+            | sed 's|<xeno>\(.*\)</xeno>|\1|' \
+            | openssl enc -base64 -d -A)
+
+    # If we found one...
+    if [ ! -z "$token" ]; then
+      # Parse the token
+      # TODO: Perhaps in the future do version checks here with f1/f2
+      remote_path=$(echo "$token" | cut -d '|' -f3)
+      repository_path=$(echo "$token" | cut -d '|' -f4)
+      repository_name=$(basename "$repository_path")
+
+      # Reacquire a lock
+      lock_xeno
+
+      # Don't clone if it already exists (stop things like screen/tmux from
+      # causing duplicates)
+      if [ ! -d "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name" ]; then
+        # Clone the remote repository
+        git clone --quiet "ssh://$remote$repository_path" \
+          "$XENO_LOCAL_SESSION_DIRECTORY/$repository_name"
+
+        # Setup author configuration for the cloned repository so that we don't
+        # need to specify --author flags everywhere
+        git config \
+          --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+          user.name xeno
+        git config \
+          --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+          user.email xeno@xeno
+
+        # Store the remote path
+        git config \
+          --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+          xeno.location "$remote:$remote_path"
+
+        # Launch the local editor on the clone
+        launch_editor_on_local_session "$repository_name"
+      fi
+
+      # Release our lock
+      unlock_xeno
+
+      # Launch the daemon in case it isn't running
+      xeno daemon
+    fi
+  done < "$fifo"
+
+  # Cleanup the fifo
+  rm "$fifo"
+
+  exit 0
+}
+
+
+# 'config' subcommand handler
+xeno_config () {
+  # Parse arguments
+  mode="print"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_CONFIG"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_CONFIG"
+        finish
+        ;;
+      -c)
+        mode="clear" ;;
+      --clear)
+        clear="clear" ;;
+      *)
+        if [ -z "$key" ]; then
+          key="$arg"
+          if [ "$mode" != "clear" ]; then
+            mode="get"
+          fi
+        elif [ -z "$value" ]; then
+          value="$arg"
+          # We don't care if clear is set here, because we'll overwrite the
+          # value anyway
+          mode="set"
+        else
+          echo "error: invalid argument: $arg"
+          echo "$USAGE_CONFIG"
+          die
+        fi
+        ;;
+    esac
+  done
+
+  # Handle based on mode
+  if [ "$mode" = "print" ]; then
+    cat "$XENO_CONFIGURATION_FILE"
+  elif [ "$mode" = "clear" ]; then
+    if [ -z "$key" ]; then
+      echo "error: no key specified on clear"
+      echo "$USAGE_CONFIG"
+      die
+    fi
+    # NOTE: git config's --unset flag will leave empty section headers behind,
+    # and when a new value for that section header is added later on, the empty
+    # (and now duplicate) section header remains!  This is a known issue and has
+    # been classified by the Git maintainers as "not a bug":
+    # https://bugzilla.redhat.com/show_bug.cgi?id=452397
+    # For now, I think we can live with it, but maybe in the future we can do
+    # something fancy with sed after unsetting the key.
+    git config --file "$XENO_CONFIGURATION_FILE" --unset "$key"
+  elif [ "$mode" = "get" ]; then
+    git config --file "$XENO_CONFIGURATION_FILE" "$key"
+  elif [ "$mode" = "set" ]; then
+    git config --file "$XENO_CONFIGURATION_FILE" "$key" "$value"
+  fi
+
+  # All done
+  finish
+}
+
+
+# 'daemon' subcommand handler
+xeno_daemon () {
+  # Parse arguments
+  mode="launch"
+  while [ $# -gt 0 ]; do
+    # Grab the argument
+    arg="$1"
+    # Gobble up this argument
+    shift
+    # Check the argument value
+    case "$arg" in
+      -h)
+        echo "$USAGE_DAEMON"
+        finish
+        ;;
+      --help)
+        echo "$USAGE_DAEMON"
+        finish
+        ;;
+      -s)
+        mode="stop" ;;
+      --stop)
+        mode="stop" ;;
+      --xeno-daemon-run)
+        mode="run" ;;
+      *)
+        echo "error: invalid argument: $arg"
+        echo "$USAGE_DAEMON"
+        die
+        ;;
+    esac
+  done
+
+  # Switch based on mode
+  if [ "$mode" = "launch" ]; then
+    # Launch a new xeno daemon if there is none already running
+    running=$(ps -ef -u $(id -u) \
+              | grep 'xeno daemon --xeno-daemon-run' \
+              | grep -v 'grep' \
+              | awk '{ print $2 }')
+    if [ -z "$running" ]; then
+      # Launch with nohup to avoid killing the daemon when the tty closes, use
+      # 0<&- to close stdin, and send the output to a log file
+      log_file="$XENO_WORKING_DIRECTORY/daemon.log"
+      nohup xeno daemon --xeno-daemon-run 0<&- > "$log_file" 2>&1 &
+    fi
+  elif [ "$mode" = "run" ]; then
+    # Compute our sync interval
+    sync_interval=$(read_config sync.interval)
+    if [ -z "$sync_interval" ]; then
+      sync_interval="10"
+    fi
+
+    # Compute sync arguments
+    poll_remote=$(read_config sync.force)
+    if [ "$poll_remote" = "true" ]; then
+      sync_arguments="--force"
+    fi
+
+    # Release our lock, we won't need it, since we delegate to 'xeno sync'
+    unlock_xeno
+
+    # Loop
+    while :
+    do
+      # Do the sync
+      $(xeno sync --all "$sync_arguments")
+      
+      # Sleep
+      sleep "$sync_interval"
+    done
+  elif [ "$mode" = "stop" ]; then
+    # Check for an existing process
+    running=$(ps -ef -u $(id -u) \
+              | grep 'xeno daemon --xeno-daemon-run' \
+              | grep -v 'grep' \
+              | awk '{ print $2 }')
+    if [ ! -z "$running" ]; then
+      kill "$running"
+    fi
+  fi
+
+  # All done
+  finish
+}
+
+
+# Run the appropriate subcommand
+case "$#" in
+  0)
+    xeno_empty ;;
+  *)
+    # Grab the subcommand name
+    subcommand="$1"
+    # Remove the xeno argument
+    shift
+    # Dispatch to the appropriate subcommand
+    case "$subcommand" in
+      edit)
+        xeno_edit "$@" ;;
+      list)
+        xeno_list "$@" ;;
+      resume)
+        xeno_resume "$@" ;;
+      stop)
+        xeno_stop "$@" ;;
+      sync)
+        xeno_sync "$@" ;;
+      ssh)
+        xeno_ssh "$@" ;;
+      ssh-monitor)
+        xeno_ssh_monitor "$@" ;;
+      config)
+        xeno_config "$@" ;;
+      daemon)
+        xeno_daemon "$@" ;;
+      -v)
+        echo "$XENO_VERSION"
+        finish
+        ;;
+      --version)
+        echo "$XENO_VERSION"
+        finish
+        ;;
+      -h)
+        echo "$USAGE"
+        finish
+        ;;
+      --help)
+        echo "$USAGE"
+        finish
+        ;;
+      *)
+        echo "error: invalid argument or subcommand: $subcommand"
+        xeno_empty ;;
+    esac
+esac
