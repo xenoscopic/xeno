@@ -153,6 +153,7 @@ XENO_LOCAL_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/local"
 XENO_REMOTE_SESSION_DIRECTORY="$XENO_WORKING_DIRECTORY/remote"
 XENO_LOCAL_FIFO_DIRECTORY="$XENO_WORKING_DIRECTORY/fifo"
 XENO_WORKING_LOCK="$HOME/.xeno.lock"
+XENO_HAVE_LOCK="false"
 
 
 # Function to acquire the global xeno lock
@@ -160,6 +161,8 @@ lock_xeno () {
   while :
   do
     if mkdir "$XENO_WORKING_LOCK" > /dev/null 2>&1; then
+      # Mark ourselves as having the lock
+      XENO_HAVE_LOCK="true"
       break
     else
       # Sleep for 1 second until we get the lock
@@ -172,9 +175,32 @@ lock_xeno () {
 
 # Function to release the global xeno lock
 unlock_xeno () {
+  # Mark ourselves as not having the lock
+  # NOTE: There's a bit of a race condition here, e.g. if we mark ourselves as
+  # not having the lock and then receive a signal which doesn't remove the lock.
+  # However, it is safer to accidentally leave the lock in place than to put
+  # this statement after lock removal and risk double lock removal on a signal.
+  XENO_HAVE_LOCK="false"
+
   # Remove the lock
   rm -rf "$XENO_WORKING_LOCK"
 }
+
+
+# Function to handle signal cleanup
+handle_signal () {
+  # Unlock xeno if we own the lock
+  if [ "$XENO_HAVE_LOCK" = "true" ]; then
+    unlock_xeno
+  fi
+
+  # Bail
+  exit 1
+}
+
+
+# Set up signal handlers
+trap handle_signal SIGHUP SIGINT SIGTERM
 
 
 # Function to exit normally
