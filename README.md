@@ -104,11 +104,11 @@ you.  Instead of trying to give instructions here, I'll point you to this
 which gives an overview of the process. 
 
 The xeno program is a portable shell script, so you can simply download it from
-[here](https://raw.githubusercontent.com/havoc-io/xeno/master/xeno) and put
+[here](https://raw.githubusercontent.com/havoc-io/xeno/1.0.0/xeno) and put
 it somewhere in your path.  For example:
 
     cd SOMEWHERE_IN_YOUR_PATH/
-    wget https://raw.githubusercontent.com/havoc-io/xeno/master/xeno
+    wget https://raw.githubusercontent.com/havoc-io/xeno/1.0.0/xeno
     chmod a+x xeno
 
 You also need to launch the xeno daemon on the local end if you want automatic
