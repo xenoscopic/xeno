@@ -200,7 +200,7 @@ handle_signal () {
 
 
 # Set up signal handlers
-trap handle_signal EXIT
+trap handle_signal HUP INT TERM
 
 
 # Function to exit normally
