@@ -10,7 +10,7 @@ runs entirely in user-space, so you can set it up and use it without complicated
 kernel modules or administrative privileges.
 
 For a quick overview, please see the introductory site: 
-[https://xeno.io/](https://xeno.io/)
+[http://xeno.io/](http://xeno.io/)
 
 
 Features and basic usage
@@ -48,15 +48,23 @@ xeno uses a variety of subcommands to do its bidding (e.g. `config`, `edit`,
 
 xeno supports the following subcommands:
 
-- [__edit__](https://github.com/havoc-io/xeno/wiki/edit): Starts editing sessions
-- [__config__](https://github.com/havoc-io/xeno/wiki/config): Manages xeno configuration information
-- __ssh__: A pass-through to 'ssh' which monitors console output for session initialization
+- [__edit__](https://github.com/havoc-io/xeno/wiki/edit): Starts editing
+  sessions
+- [__list__](https://github.com/havoc-io/xeno/wiki/list): Lists active xeno
+  sessions
+- [__resume__](https://github.com/havoc-io/xeno/wiki/resume): Resumes a xeno
+  session (open your editor on the local copy)
+- [__stop__](https://github.com/havoc-io/xeno/wiki/stop): Stops a xeno session
+  and cleans up local/remote resources
+- [__sync__](https://github.com/havoc-io/xeno/wiki/sync): Manually syncs a xeno
+  session with the remote copy
+- [__ssh__](https://github.com/havoc-io/xeno/wiki/ssh): A pass-through to 'ssh'
+  which monitors console output for session initialization
   ([see FAQ](https://github.com/havoc-io/xeno/wiki/FAQs#isnt-it-insecure-to-use-the-xeno-ssh-wrapper)).
-- [__list__](https://github.com/havoc-io/xeno/wiki/list): Lists active xeno sessions
-- [__resume__](https://github.com/havoc-io/xeno/wiki/resume): Resumes a xeno session (open your editor on the local copy)
-- [__stop__](https://github.com/havoc-io/xeno/wiki/stop): Stops a xeno session and cleans up local/remote resources
-- [__sync__](https://github.com/havoc-io/xeno/wiki/sync): Manually syncs a xeno session with the remote copy
-- [__daemon__](https://github.com/havoc-io/xeno/wiki/sync): Starts and stops the xeno daemon
+- [__config__](https://github.com/havoc-io/xeno/wiki/config): Manages xeno
+  configuration information
+- [__daemon__](https://github.com/havoc-io/xeno/wiki/sync): Starts and stops the
+  xeno daemon
 
 To keep consistency, if you use the `xeno edit` command on a local path, it will
 simply open the local path in your editor.  Thus, it is often convenient to
@@ -86,6 +94,13 @@ many systems and shells as possible (within reason).
 
 Installation
 ------------
+
+Before using xeno, it is strongly recommended (though by no means essential)
+that you set up SSH connection multiplexing.  This allows you to persist SSH
+connections and re-use them, and will make SSH, Git, and xeno much faster for
+you.  Instead of trying to give instructions here, I'll point you to this
+[awesome article by Rackspace](developer.rackspace.com/blog/speeding-up-ssh-session-creation.html)
+which gives an overview of the process. 
 
 The xeno program is a portable shell script, so you can simply download it from
 [here](https://raw.githubusercontent.com/havoc-io/xeno/master/xeno) and put
@@ -144,7 +159,7 @@ xeno supports the following configuration keys:
 - __sync.interval__: The period, in seconds, for the daemon to wait between
   checks for local changes.  The default is 10.
 - __sync.force__: By default, the daemon only checks for changes on the remote
-  when pushing local changes.  If this is set to True, xeno will check the
+  when pushing local changes.  If this is set to "true", xeno will check the
   remote for changes every time it checks the local copy.
 
 
@@ -227,8 +242,12 @@ For more detailed information, please see the
 
 IMPORTANT NOTE
 --------------
-Versions of xeno prior to 1.0.0 were written in Python, and are not compatible
-with versions 1.0.0+.  If you still require access to the older Python versions,
-you can install the last one with:
+Early prototype versions of xeno prior to 1.0.0 were written in Python, and are
+not compatible with versions 1.0.0+.  If you still require access to the older
+Python versions, you can install the last one with:
 
     pip install git+https://github.com/havoc-io/xeno.git@0.0.5
+
+Please note however that the Python version is no longer developed, supported,
+or even recommended.  The shell version is simpler and has much better test
+coverage.
