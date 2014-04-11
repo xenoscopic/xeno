@@ -200,7 +200,7 @@ handle_signal () {
 
 
 # Set up signal handlers
-trap handle_signal SIGINT SIGTERM
+trap handle_signal EXIT
 
 
 # Function to exit normally
