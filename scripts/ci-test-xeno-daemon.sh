@@ -56,6 +56,11 @@ testStartStop()
   result=$?
   assertEquals "xeno daemon should stop successfully" 0 ${result}
 
+  # HACK: Sleep for a few seconds to make sure the daemon stops.  This is
+  # inherently a race condition and a crappy solution, but I don't want to loop,
+  # and in any case the daemon should stop quickly.
+  sleep 3
+
   # Make sure it stopped
   result=$(ps -ef -u $(id -u) \
            | grep 'xeno daemon --xeno-daemon-run' \
