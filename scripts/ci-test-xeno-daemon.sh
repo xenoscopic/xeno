@@ -35,7 +35,7 @@ testStartStop()
   xeno daemon --stop
 
   # Start an instance
-  xeno daemon > /dev/null 2>&1
+  xeno daemon
   result=$?
   assertEquals "xeno daemon should start successfully" 0 ${result}
 
@@ -45,24 +45,25 @@ testStartStop()
   sleep 3
 
   # Make sure it started
-  result=$(ps -ef -u $(id -u) \
+  result=$(ps -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)
   assertEquals "xeno daemon should be running" "1" ${result}
 
   # Stop it
-  xeno daemon --stop > /dev/null 2>&1
+  xeno daemon --stop 
   result=$?
   assertEquals "xeno daemon should stop successfully" 0 ${result}
 
-  # HACK: Sleep for a few seconds to make sure the daemon stops.  This is
+  # HACK: Sleep for a few seconds to make sure the daemon stops.  Interestingly,
+  # it seems that it can take even longer to stop than start.  This is
   # inherently a race condition and a crappy solution, but I don't want to loop,
-  # and in any case the daemon should stop quickly.
-  sleep 3
+  # and in any case the daemon should stop semi-quickly.
+  sleep 10
 
   # Make sure it stopped
-  result=$(ps -ef -u $(id -u) \
+  result=$(ps -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)

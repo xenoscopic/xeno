@@ -1213,10 +1213,10 @@ xeno_daemon () {
   # Switch based on mode
   if [ "$mode" = "launch" ]; then
     # Launch a new xeno daemon if there is none already running
-    running=$(ps -ef -u $(id -u) \
+    running=$(ps -o pid -o args \
               | grep 'xeno daemon --xeno-daemon-run' \
               | grep -v 'grep' \
-              | awk '{ print $2 }')
+              | cut -d ' ' -f1)
     if [ -z "$running" ]; then
       # Launch with nohup to avoid killing the daemon when the tty closes, use
       # 0<&- to close stdin, and send the output to a log file
@@ -1250,10 +1250,10 @@ xeno_daemon () {
     done
   elif [ "$mode" = "stop" ]; then
     # Check for an existing process
-    running=$(ps -ef -u $(id -u) \
+    running=$(ps -o pid -o args \
               | grep 'xeno daemon --xeno-daemon-run' \
               | grep -v 'grep' \
-              | awk '{ print $2 }')
+              | cut -d ' ' -f1)
     if [ ! -z "$running" ]; then
       kill "$running"
     fi

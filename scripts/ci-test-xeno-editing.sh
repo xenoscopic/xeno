@@ -88,7 +88,7 @@ fileEdit()
   sleep 3
 
   # Make sure the daemon is running (as startd by edit)
-  result=$(ps -ef -u $(id -u) \
+  result=$(ps -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)
@@ -174,7 +174,7 @@ directoryEdit()
   sleep 3
 
   # Make sure the daemon is running (as startd by edit)
-  result=$(ps -ef -u $(id -u) \
+  result=$(ps -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)
