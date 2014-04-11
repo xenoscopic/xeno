@@ -1222,6 +1222,12 @@ xeno_daemon () {
       # 0<&- to close stdin, and send the output to a log file
       log_file="$XENO_WORKING_DIRECTORY/daemon.log"
       nohup xeno daemon --xeno-daemon-run 0<&- > "$log_file" 2>&1 &
+
+      # Wait until the process starts (can take several seconds)
+      while ! kill -0 $! > /dev/null 2>&1
+      do
+        sleep 1
+      done
     fi
   elif [ "$mode" = "run" ]; then
     # Compute our sync interval
@@ -1249,14 +1255,30 @@ xeno_daemon () {
       sleep "$sync_interval"
     done
   elif [ "$mode" = "stop" ]; then
+    # Release our lock so that if, for some reason, the daemon is still trying
+    # to acquire its initial lock, we don't deadlock waiting for it to exit
+    unlock_xeno
+
     # Check for an existing process
     running=$(ps -o pid -o args \
               | grep 'xeno daemon --xeno-daemon-run' \
               | grep -v 'grep' \
               | cut -d ' ' -f1)
+
+    # If we find an existing session...
     if [ ! -z "$running" ]; then
+      # Send it a termination signal
       kill "$running"
+
+      # Wait while it still exists (can take several seconds)
+      while kill -0 "$running" > /dev/null 2>&1
+      do
+        sleep 1
+      done
     fi
+
+    # Exit manually since we don't have a lock
+    exit 0
   fi
 
   # All done

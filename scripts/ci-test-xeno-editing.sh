@@ -82,11 +82,6 @@ fileEdit()
   # Compute the session hash
   session_id=$(ls ~/.xeno/local)
 
-  # HACK: Sleep for a few seconds to make sure the daemon starts up.  This is
-  # inherently a race condition and a crappy solution, but I don't want to loop,
-  # and in any case the daemon should start up quickly.
-  sleep 3
-
   # Make sure the daemon is running (as startd by edit)
   result=$(ps -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
@@ -167,11 +162,6 @@ directoryEdit()
   # Make sure that our ignore commands worked
   result=$(ls "$HOME/.xeno/local/$session_id/content to test" | wc -l)
   assertEquals "xeno should have correct file count after ignore" "2" ${result}
-
-  # HACK: Sleep for a few seconds to make sure the daemon starts up.  This is
-  # inherently a race condition and a crappy solution, but I don't want to loop,
-  # and in any case the daemon should start up quickly.
-  sleep 3
 
   # Make sure the daemon is running (as startd by edit)
   result=$(ps -o pid -o args \

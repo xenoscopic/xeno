@@ -34,21 +34,10 @@ testStartStop()
   # Kill any existing instances
   xeno daemon --stop
 
-  # HACK: Sleep for a few seconds to make sure the daemon stops.  Interestingly,
-  # it seems that it can take even longer to stop than start.  This is
-  # inherently a race condition and a crappy solution, but I don't want to loop,
-  # and in any case the daemon should stop semi-quickly.
-  sleep 10
-
   # Start an instance
   xeno daemon
   result=$?
   assertEquals "xeno daemon should start successfully" 0 ${result}
-
-  # HACK: Sleep for a few seconds to make sure the daemon starts up.  This is
-  # inherently a race condition and a crappy solution, but I don't want to loop,
-  # and in any case the daemon should start up quickly.
-  sleep 3
 
   # Make sure it started
   result=$(ps -o pid -o args \
@@ -61,12 +50,6 @@ testStartStop()
   xeno daemon --stop 
   result=$?
   assertEquals "xeno daemon should stop successfully" 0 ${result}
-
-  # HACK: Sleep for a few seconds to make sure the daemon stops.  Interestingly,
-  # it seems that it can take even longer to stop than start.  This is
-  # inherently a race condition and a crappy solution, but I don't want to loop,
-  # and in any case the daemon should stop semi-quickly.
-  sleep 10
 
   # Make sure it stopped
   result=$(ps -o pid -o args \
