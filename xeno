@@ -501,21 +501,10 @@ xeno_edit () {
       # Create the incoming branch
       $(cd "$repository_path" && git branch incoming)
 
-      # Set up the pre-receive hook.  This will commit any changes on the remote
-      # end since we will likely do a pull after pushing local changes and we
-      # will want to pick these up.
-      echo '#!/bin/sh
-      # Add any uncommitted changes
-      if [ ! -z "$(git status --porcelain)" ]; then
-        git add --all ":/'"$target_name"'"
-        git commit --quiet -m "xeno-remote"
-      fi
-      exit 0
-      ' > "$repository_path/hooks/pre-receive"
-      chmod +x "$repository_path/hooks/pre-receive"
-
-      # Set up the post-receive hook.  This will merge the incoming branch on
-      # the remote end into master, using incoming as canonical.
+      # Set up the post-receive hook.  This will commit any changes on the
+      # remote end since we will do a pull after pushing local changes and we
+      # will want to pick up these changes.  It will then merge the incoming
+      # branch on the remote end into master, using incoming as canonical.
       # HACK: There is a --no-edit flag for merge, but it wasn't added til Git
       # 1.7.10, and before that, the editor did not pop up automatically.  The
       # GIT_MERGE_AUTOEDIT environment variable has the same effect as --no-edit
@@ -523,6 +512,14 @@ xeno_edit () {
       # HACK: The stupid merge command will not shut up, even with the --quiet
       # flag, so manually silence it
       echo '#!/bin/sh
+
+      # Add any uncommitted changes
+      if [ ! -z "$(git status --porcelain)" ]; then
+        git add --all ":/'"$target_name"'"
+        git commit --quiet -m "xeno-remote"
+      fi
+
+      # Merge the incoming branch into the working copy
       GIT_MERGE_AUTOEDIT=no git merge incoming --quiet --commit -m \
       "xeno-remote-merge" --strategy=recursive -X theirs > /dev/null 2>&1
       exit 0

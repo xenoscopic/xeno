@@ -3,9 +3,9 @@ xeno
 
 [![Build Status](https://travis-ci.org/havoc-io/xeno.png?branch=master)](https://travis-ci.org/havoc-io/xeno)
 
-xeno allows you to edit files and folders on a remote computer using the editor
-on your local machine.  It synchronizes data using Git and SSH, making it robust
-to connection dropouts and easily allowing you to work offline.  Best of all, it
+xeno allows you to edit files and folders on a remote system using the editor on
+your local machine.  It synchronizes data using Git and SSH, making it robust to
+connection dropouts and easily allowing you to work offline.  Best of all, it
 runs entirely in user-space, so you can set it up and use it without complicated
 kernel modules or administrative privileges.
 
@@ -53,11 +53,11 @@ xeno supports the following subcommands:
 - [__list__](https://github.com/havoc-io/xeno/wiki/list): Lists active xeno
   sessions
 - [__resume__](https://github.com/havoc-io/xeno/wiki/resume): Resumes a xeno
-  session (open your editor on the local copy)
+  session (opens your editor on the local copy)
 - [__stop__](https://github.com/havoc-io/xeno/wiki/stop): Stops a xeno session
   and cleans up local/remote resources
-- [__sync__](https://github.com/havoc-io/xeno/wiki/sync): Manually syncs a xeno
-  session with the remote copy
+- [__sync__](https://github.com/havoc-io/xeno/wiki/sync): Manually synchronizes
+  a xeno session with the remote copy
 - [__ssh__](https://github.com/havoc-io/xeno/wiki/ssh): A pass-through to 'ssh'
   which monitors console output for session initialization
   ([see FAQ](https://github.com/havoc-io/xeno/wiki/FAQs#isnt-it-insecure-to-use-the-xeno-ssh-wrapper)).
@@ -66,10 +66,11 @@ xeno supports the following subcommands:
 - [__daemon__](https://github.com/havoc-io/xeno/wiki/sync): Starts and stops the
   xeno daemon
 
-To keep consistency, if you use the `xeno edit` command on a local path, it will
-simply open the local path in your editor.  Thus, it is often convenient to
-alias the `xeno edit` command as something like `xen`, and use the `xen` command
-as a way to consistently launch your editor, both locally and remotely.
+To keep consistency, if you use the `xeno edit` command on a local path outside
+of an SSH session, it will simply open the local path in your editor.  Thus, it
+is often convenient to alias the `xeno edit` command as something like `xen`,
+and use the `xen` command as a way to consistently launch your editor, both
+locally and remotely.
 
 
 Requirements
@@ -117,7 +118,7 @@ SSH session) and `resume` commands will automatically launch the local daemon if
 it is not running.  You can manually start the daemon using the `xeno daemon`
 command (e.g. if you restart your computer and then don't use `xeno resume`).
 This command will not start another daemon if one is already running, so it is
-advised that you simply put this into your login shell initialization script.
+advised that you simply put this into your shell initialization script.
 
 Finally, if you want in-SSH launch capabilities, you will need to install the
 xeno script in your path on the remote end, and on the local end you need to do:
@@ -166,7 +167,7 @@ xeno supports the following configuration keys:
 Implementation
 --------------
 The best way to understand xeno's implementation is to simply read it.  It's
-only about 1,200 lines of shell script, which is organized roughly as:
+only about 1,300 lines of shell script, which is organized roughly as:
 
     # Constants
     # Utility functions
@@ -203,14 +204,13 @@ synchronization flow looks like:
     |                              \|/   |        (bare, out-of-work-tree) |
     |                       <incoming>   |                                 |
     |                               |    |                                 |
-    | 2. pre/post-receive hooks     |    |                                 |
-    |    commit the remote master   |    |                                 |
-    |    and merge the incoming     |    |                                 |
+    | 2. post-receive hook commits  |    |                                 |
+    |    the remote master and      |    |                                 |
+    |    merges the incoming        |    |                                 |
     |    changes into master,       |    |                                 |
     |    keeping the incoming       |    |                                 |
     |    changes as canonical with  |    |                                 |
     |    '-X theirs'                |    |                                 |
-    |                               |    |                                 |
     |                              <master>                                |
     ----------------------------------|-------------------------------------
                                       |
