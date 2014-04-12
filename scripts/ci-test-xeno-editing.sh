@@ -83,7 +83,7 @@ fileEdit()
   session_id=$(ls ~/.xeno/local)
 
   # Make sure the daemon is running (as startd by edit)
-  result=$(ps -o pid -o args \
+  result=$(ps -U $(id -u) -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)
@@ -164,7 +164,7 @@ directoryEdit()
   assertEquals "xeno should have correct file count after ignore" "2" ${result}
 
   # Make sure the daemon is running (as startd by edit)
-  result=$(ps -o pid -o args \
+  result=$(ps -U $(id -u) -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)

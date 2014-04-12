@@ -40,7 +40,7 @@ testStartStop()
   assertEquals "xeno daemon should start successfully" 0 ${result}
 
   # Make sure it started
-  result=$(ps -o pid -o args \
+  result=$(ps -U $(id -u) -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)
@@ -52,7 +52,7 @@ testStartStop()
   assertEquals "xeno daemon should stop successfully" 0 ${result}
 
   # Make sure it stopped
-  result=$(ps -o pid -o args \
+  result=$(ps -U $(id -u) -o pid -o args \
            | grep 'xeno daemon --xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)

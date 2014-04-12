@@ -1213,7 +1213,7 @@ xeno_daemon () {
   # Switch based on mode
   if [ "$mode" = "launch" ]; then
     # Launch a new xeno daemon if there is none already running
-    running=$(ps -o pid -o args \
+    running=$(ps -U $(id -u) -o pid -o args \
               | grep 'xeno daemon --xeno-daemon-run' \
               | grep -v 'grep' \
               | cut -d ' ' -f1)
@@ -1259,11 +1259,13 @@ xeno_daemon () {
     # to acquire its initial lock, we don't deadlock waiting for it to exit
     unlock_xeno
 
-    # Check for an existing process
-    running=$(ps -o pid -o args \
+    # Check for an existing process (NOTE: although there should be only one, we
+    # make sure that we only grab the first one)
+    running=$(ps -U $(id -u) -o pid -o args \
               | grep 'xeno daemon --xeno-daemon-run' \
               | grep -v 'grep' \
-              | cut -d ' ' -f1)
+              | cut -d ' ' -f1 \
+              | head -n 1)
 
     # If we find an existing session...
     if [ ! -z "$running" ]; then
