@@ -111,6 +111,10 @@ it somewhere in your path.  For example:
     wget https://raw.githubusercontent.com/havoc-io/xeno/1.0.2/xeno
     chmod a+x xeno
 
+OS X users can alternatively install xeno via [Homebrew](http://brew.sh/):
+
+    brew install https://raw.githubusercontent.com/havoc-io/xeno/master/packaging/osx/homebrew/xeno.rb
+
 You also need to launch the xeno daemon on the local end if you want automatic
 synchronization (you do not need to run the daemon on the remote end).  The xeno
 daemon must be run on a per-user basis.  The `edit` (both locally and inside an
