@@ -1215,8 +1215,7 @@ xeno_daemon () {
     # Launch a new xeno daemon if there is none already running
     running=$(ps -U $(id -u) -o pid -o args \
               | grep 'xeno daemon --xeno-daemon-run' \
-              | grep -v 'grep' \
-              | cut -d ' ' -f1)
+              | grep -v 'grep')
     if [ -z "$running" ]; then
       # Launch with nohup to avoid killing the daemon when the tty closes, use
       # 0<&- to close stdin, and send the output to a log file
@@ -1264,6 +1263,7 @@ xeno_daemon () {
     running=$(ps -U $(id -u) -o pid -o args \
               | grep 'xeno daemon --xeno-daemon-run' \
               | grep -v 'grep' \
+              | sed 's/^[ \t]*//' \
               | cut -d ' ' -f1 \
               | head -n 1)
 
