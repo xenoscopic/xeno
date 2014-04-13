@@ -9,9 +9,6 @@ connection dropouts and easily allowing you to work offline.  Best of all, it
 runs entirely in user-space, so you can set it up and use it without complicated
 kernel modules or administrative privileges.
 
-For a quick overview, please see the introductory site: 
-[http://xeno.io/](http://xeno.io/)
-
 
 Features and basic usage
 ------------------------
