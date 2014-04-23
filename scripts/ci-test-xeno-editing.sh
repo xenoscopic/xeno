@@ -84,7 +84,7 @@ fileEdit()
 
   # Make sure the daemon is running (as startd by edit)
   result=$(ps -U $(id -u) -o pid -o args \
-           | grep 'xeno daemon --xeno-daemon-run' \
+           | grep 'xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)
   assertEquals "xeno daemon should be running" "1" ${result}
@@ -165,7 +165,7 @@ directoryEdit()
 
   # Make sure the daemon is running (as startd by edit)
   result=$(ps -U $(id -u) -o pid -o args \
-           | grep 'xeno daemon --xeno-daemon-run' \
+           | grep 'xeno-daemon-run' \
            | grep -v 'grep' \
            | wc -l)
   assertEquals "xeno daemon should be running" "1" ${result}

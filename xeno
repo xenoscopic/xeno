@@ -1214,7 +1214,7 @@ xeno_daemon () {
   if [ "$mode" = "launch" ]; then
     # Launch a new xeno daemon if there is none already running
     running=$(ps -U $(id -u) -o pid -o args \
-              | grep 'xeno daemon --xeno-daemon-run' \
+              | grep 'xeno-daemon-run' \
               | grep -v 'grep')
     if [ -z "$running" ]; then
       # Launch the daemon in the background, using 0<&- to close stdin, and
@@ -1263,7 +1263,7 @@ xeno_daemon () {
     # lengths, in which case the shorter pids are prefixed with whitespace and
     # the cut command fails to extract a process id.
     running=$(ps -U $(id -u) -o pid -o args \
-              | grep 'xeno daemon --xeno-daemon-run' \
+              | grep 'xeno-daemon-run' \
               | grep -v 'grep' \
               | head -n 1 \
               | sed 's/^[ \t]*//' \
