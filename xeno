@@ -1217,18 +1217,15 @@ xeno_daemon () {
               | grep 'xeno daemon --xeno-daemon-run' \
               | grep -v 'grep')
     if [ -z "$running" ]; then
-      # Launch with nohup to avoid killing the daemon when the tty closes, use
-      # 0<&- to close stdin, and send the output to a log file
+      # Launch the daemon in the background, using 0<&- to close stdin, and
+      # sending the output to a log file
       log_file="$XENO_WORKING_DIRECTORY/daemon.log"
-      nohup xeno daemon --xeno-daemon-run 0<&- > "$log_file" 2>&1 &
-
-      # Wait until the process starts (can take several seconds)
-      while ! kill -0 $! > /dev/null 2>&1
-      do
-        sleep 1
-      done
+      xeno daemon --xeno-daemon-run 0<&- > "$log_file" 2>&1 &
     fi
   elif [ "$mode" = "run" ]; then
+    # Change the SIGHUP handler to be a no-op rather than to kill the daemon
+    trap "" HUP
+
     # Compute our sync interval
     sync_interval=$(read_config sync.interval)
     if [ -z "$sync_interval" ]; then
