@@ -406,7 +406,7 @@ xeno_edit () {
     echo "$USAGE_EDIT"
     die
   fi
-  
+
   # Parse the location.  The location will be of the form:
   #
   #     [[username@]hostname:[port:]]path
@@ -528,7 +528,7 @@ xeno_edit () {
       exit 0
       ' > "$repository_path/hooks/post-receive"
       chmod +x "$repository_path/hooks/post-receive"
-      
+
       # Encode the repository path
       token=$(echo "$XENO_VERSION|initialize|$path|$repository_path" \
               | openssl enc -base64 -A)
@@ -661,7 +661,7 @@ xeno_list () {
     else
       status="synced"
     fi
-    
+
     # Print it
     echo "$session_index: $location ($status)"
 
@@ -1249,7 +1249,7 @@ xeno_daemon () {
     do
       # Do the sync
       $(xeno sync --all "$sync_arguments")
-      
+
       # Sleep
       sleep "$sync_interval"
     done
