@@ -293,7 +293,7 @@ canonical_path () {
 
 # Function to list sessions
 list_sessions () {
-  ls "$XENO_LOCAL_SESSION_DIRECTORY" | grep '^[0-9a-z]\{40,40\}$'
+  ls -t -r "$XENO_LOCAL_SESSION_DIRECTORY" | grep '^[0-9a-z]\{40,40\}$'
 }
 
 
