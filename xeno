@@ -1260,31 +1260,35 @@ xeno_daemon () {
     # to acquire its initial lock, we don't deadlock waiting for it to exit
     unlock_xeno
 
-    # Check for an existing process
-    # NOTE: although there should be only one, we make sure that we only grab
-    # the first one.
-    # NOTE: The call to sed in here strips whitespace which can occur at the
-    # beginning of ps output if there are process ids listed with different
-    # lengths, in which case the shorter pids are prefixed with whitespace and
-    # the cut command fails to extract a process id.
-    running=$(ps -U $(id -u) -o pid -o args \
-              | grep 'xeno-daemon-run' \
-              | grep -v 'grep' \
-              | head -n 1 \
-              | sed 's/^[ \t]*//' \
-              | cut -d ' ' -f1)
+    # Loop while the daemon may be alive
+    while :
+    do
+      # Check if the daemon is alive
+      # NOTE: Although there should be only one, we make sure that we only grab
+      # the first one.
+      # NOTE: The call to sed in here strips whitespace which can occur at the
+      # beginning of ps output if there are process ids listed with different
+      # lengths, in which case the shorter pids are prefixed with whitespace and
+      # the cut command fails to extract a process id.
+      running=$(ps -U $(id -u) -o pid -o args \
+                | grep 'xeno-daemon-run' \
+                | grep -v 'grep' \
+                | head -n 1 \
+                | sed 's/^[ \t]*//' \
+                | cut -d ' ' -f1)
 
-    # If we find an existing session...
-    if [ ! -z "$running" ]; then
-      # Send it a termination signal
-      kill "$running"
+      # If we find an existing session...
+      if [ ! -z "$running" ]; then
+        # Send it a termination signal
+        kill "$running"
 
-      # Wait while it still exists (can take several seconds)
-      while kill -0 "$running" > /dev/null 2>&1
-      do
+        # Wait and then check again
         sleep 1
-      done
-    fi
+      else
+        # Nothing was there, so we're done
+        break
+      fi
+    done
 
     # Exit manually since we don't have a lock
     exit 0
