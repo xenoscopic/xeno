@@ -147,7 +147,7 @@ directoryEdit()
     # is happening in a background process)
     sleep 3
   else
-    xeno edit "localhost:$TEST_CONTENT_PATH" -i "ignorable\ file"
+    xeno edit "$USER@localhost:$TEST_CONTENT_PATH" -i "ignorable\ file"
   fi
   result=$?
   assertEquals "xeno edit should exit with code 0" 0 ${result}

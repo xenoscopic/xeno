@@ -414,7 +414,7 @@ xeno_edit () {
   # We first split on the @ symbol into username/remaining, and then use the
   # number of ':' to determine the remaining format.
   user=$(echo "$location" | grep @ | cut -d@ -f1)
-  remaining=$(echo "$location" | sed 's/^$user@//')
+  remaining=$(echo "$location" | sed "s/^$user@//")
   separators=$(echo "$remaining" | sed 's/[^:]//g')
   if [ "$separators" = "" ]; then
     host=""
