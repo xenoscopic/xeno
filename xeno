@@ -1053,13 +1053,15 @@ xeno_ssh_monitor () {
   while read line
   do
     # Check for an initialization token
-    token=$(echo "$line" \
-            | grep '<xeno>.*</xeno>' \
-            | sed 's|<xeno>\(.*\)</xeno>|\1|' \
-            | openssl enc -base64 -d -A)
+    token=$(echo "$line" | grep '<xeno>.*</xeno>')
 
     # If we found one...
     if [ ! -z "$token" ]; then
+      # Extract the token
+      token=$(echo "$token" \
+              | sed 's|<xeno>\(.*\)</xeno>|\1|' \
+              | openssl enc -base64 -d -A)
+
       # Parse the token
       # TODO: Perhaps in the future do version checks here with f1/f2
       remote_path=$(echo "$token" | cut -d '|' -f3)
