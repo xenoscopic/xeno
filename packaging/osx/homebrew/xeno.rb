@@ -2,9 +2,9 @@ require 'formula'
 
 class Xeno < Formula
   homepage 'http://xeno.io'
-  url 'https://github.com/havoc-io/xeno/archive/1.0.4.tar.gz'
-  version '1.0.4'
-  sha1 '1fb01583f87303eb8db03cd7ed1b34e9771dcac9'
+  url 'https://github.com/havoc-io/xeno/archive/1.0.5.tar.gz'
+  version '1.0.5'
+  sha1 '5c5f962509b33b8ba7e4ad17af69f506cdd77256'
 
   def install
     bin.install 'xeno'
