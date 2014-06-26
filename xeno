@@ -823,7 +823,7 @@ xeno_stop () {
       location=$(cd "$repository_path" \
                  && git config --get remote.origin.url | sed 's|^ssh://||' )
       user=$(echo "$location" | grep @ | cut -d@ -f1)
-      remaining=$(echo "$location" | sed 's/^$user@//')
+      remaining=$(echo "$location" | sed "s/^$user@//")
       hostport=$(echo "$remaining" | cut -d/ -f1)
       separators=$(echo "$hostport" | sed 's/[^:]//g')
       if [ "$separators" = ":" ]; then
