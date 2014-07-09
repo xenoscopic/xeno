@@ -3,7 +3,6 @@ language: shell
 
 # Install build dependencies
 install:
-  - sudo apt-get -qq update
   - sudo apt-get -qq install git devscripts shunit2 openssh-client openssh-server
 
 # Setup SSH infrastructure necessary to run tests
