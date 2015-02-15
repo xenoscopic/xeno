@@ -62,6 +62,8 @@ xeno supports the following subcommands:
   configuration information
 - [__daemon__](https://github.com/havoc-io/xeno/wiki/sync): Starts and stops the
   xeno daemon
+- [__fswatch__](https://github.com/havoc-io/xeno/wiki/fswatch): Starts and stops
+  the xeno fswatch daemon
 
 To keep consistency, if you use the `xeno edit` command on a local path outside
 of an SSH session, it will simply open the local path in your editor.  Thus, it
@@ -79,12 +81,18 @@ xeno has a *very* minimal set of system dependencies, in particular:
 - OpenSSH
 - OpenSSL
 - Git 1.7.6+
+- fswatch (optional)
 
 Most systems meet the POSIX, OpenSSH, and OpenSSL requirements out of the box,
 and Git is generally going to be installed on most systems of interest.  These
 requirements apply to both ends of the editing connection, though on the client
 side only OpenSSH client is required, and on the server side only OpenSSH server
 is required.
+
+`fswatch` is multi-platform file-change notification utility. It is designed to
+work on Mac OSX, Linux, *BSD using whatever file-change notification facility
+is available on each particular platform. It's use is optional and only required
+if the `xeno fswatch` daemon mode is used.
 
 If there are issues, please let me know.  I'd like to make things work on as
 many systems and shells as possible (within reason).
@@ -98,7 +106,7 @@ that you set up SSH connection multiplexing.  This allows you to persist SSH
 connections and re-use them, and will make SSH, Git, and xeno much faster for
 you.  Instead of trying to give instructions here, I'll point you to this
 [awesome article by Rackspace](developer.rackspace.com/blog/speeding-up-ssh-session-creation.html)
-which gives an overview of the process. 
+which gives an overview of the process.
 
 The xeno program is a portable shell script, so you can simply download it from
 [here](https://raw.githubusercontent.com/havoc-io/xeno/1.0.5/xeno) and put
@@ -164,6 +172,18 @@ xeno supports the following configuration keys:
   when pushing local changes.  If this is set to "true", xeno will check the
   remote for changes every time it checks the local copy.
 
+fswatch daemon mode
+-------------------
+
+In order to speed up the pushing of changes to remote server you may use the
+`xeno fswatch` daemon mode. When running in this mode, fswatch is used to detect
+changes to local content and then immediately trigger `xeno sync` to sync those
+changes to the remote host.
+
+`xeno fswatch` may be used in conjunction with `xeno daemon` because remote
+changes will not be picked up by fswatch. Thus, it may be necessary to also run
+`xeno daemon` to periodically pull remote changes into the local copy (the
+`sync.force` config option must be set).
 
 Implementation
 --------------
@@ -181,7 +201,7 @@ remote machine to track and coordinate changes.  It installs some hooks in the
 remote repository to do some comitting/merging on the remote end every time a
 push is received from the local end.  xeno will then clone the remote
 repository and launch your local editor on the clone.  The basic repository
-synchronization flow looks like:   
+synchronization flow looks like:
 
     ------------------------------------------------------------------------
     |                                                               Editor |
