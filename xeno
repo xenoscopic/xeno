@@ -968,7 +968,7 @@ xeno_sync () {
     repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
     session_name="$(git config --file=$repository_path/.git/config --get xeno.name)"
 
-    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+    if [ "$mode" = "all" -o "$session_index" = "$session" -o "$session_name" = "$session" ]; then
       # Synchronize
 
       # Add any local changes or create a dummy commit if we're forcing things
