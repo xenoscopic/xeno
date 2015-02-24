@@ -62,7 +62,7 @@ To see help information for a subcommand, use 'xeno <subcommand> --help'
 "
 
 USAGE_EDIT="usage: xeno edit [-h|--help] [[username@]hostname:[port:]]path
-                 [-i|--ignore <path>]
+                 [-i|--ignore <path>] [-n|--name <name>]
 
 edit locations with xeno
 
@@ -73,6 +73,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this message and exit
   -i, --ignore <path>   add an ignored remote path
+  -n, --name <name>     add a name to reference with
 "
 
 USAGE_LIST="usage: xeno list [-h|--help]
@@ -88,7 +89,7 @@ USAGE_RESUME="usage: xeno resume [-h|--help] [-a|--all] [session]
 resume an existing editing session
 
 positional arguments:
-  session               the session id to resume (see 'xeno list')
+  session               the session id/name to resume (see 'xeno list')
 
 optional arguments:
   -h, --help            show this message and exit
@@ -100,7 +101,7 @@ USAGE_STOP="usage: xeno stop [-h|--help] [-a|--all] [session]
 stop an editing session
 
 positional arguments:
-  session               the session id to stop (see 'xeno list')
+  session               the session id/name to stop (see 'xeno list')
 
 optional arguments:
   -h, --help            show this message and exit
@@ -112,7 +113,7 @@ USAGE_SYNC="usage: xeno sync [-h|--help] [-a|--all] [-f|--force] [session]
 manually synchronize an editing session
 
 positional arguments:
-  session               the session id to sync (see 'xeno list')
+  session               the session id/name to sync (see 'xeno list')
 
 optional arguments:
   -h, --help            show this message and exit
@@ -361,6 +362,7 @@ xeno_edit () {
   # to file or pass them on
   ignore_lines=""
   ignore_flags=""
+  session_name=""
 
   # Parse arguments
   while [ $# -gt 0 ]; do
@@ -387,6 +389,14 @@ xeno_edit () {
         ignore_lines="${ignore_lines}${1}\n"
         ignore_flags="${ignore_flags}-i ${1} "
         shift # Gobble the ignore value
+        ;;
+      -n)
+        session_name="${1}"
+        shift # Gobble the name value
+        ;;
+      --name)
+        session_name="${1}"
+        shift # Gobble the name value
         ;;
       *)
         if [ -z "$location" ]; then
@@ -603,6 +613,11 @@ xeno_edit () {
       --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
       xeno.location "$user$host$git_port:$remote_path"
 
+    # Store the session name
+    git config \
+      --file="$XENO_LOCAL_SESSION_DIRECTORY/$repository_name/.git/config" \
+      xeno.name "$session_name"
+
     # Launch the daemon in case it isn't running
     unlock_xeno
     xeno daemon
@@ -651,6 +666,18 @@ xeno_list () {
                    --file="$XENO_LOCAL_SESSION_DIRECTORY/$s/.git/config" \
                    xeno.location)
 
+    session_name=$(git config \
+                  --file="$XENO_LOCAL_SESSION_DIRECTORY/$s/.git/config" \
+                  xeno.name)
+
+    if [ -z $session_name ]; then
+        session_name="none"
+    fi
+
+    if [ "$(read_config core.color)" = "true" ]; then
+      session_name="\033[1;36m$session_name\033[0m"
+    fi
+
     # Check if there are unsynced changes
     uncommitted=$(cd "$XENO_LOCAL_SESSION_DIRECTORY/$s" \
                   && git status --porcelain)
@@ -658,12 +685,18 @@ xeno_list () {
                && git log --pretty=oneline --abbrev-commit origin/master..HEAD)
     if [ ! -z "$uncommitted" -o ! -z "$unpushed" ]; then
       status="unsynced"
+      if [ $(read_config core.color) -eq "true" ]; then
+        status="\033[1;31m$status\033[0m"
+      fi
     else
       status="synced"
+      if [ "$(read_config core.color)" = "true" ]; then
+        status="\033[1;32m$status\033[0m"
+      fi
     fi
 
     # Print it
-    echo "$session_index: $location ($status)"
+    echo "$session_index: [$session_name] $location ($status)"
 
     # Move to the next session
     session_index=$((session_index + 1))
@@ -724,7 +757,11 @@ xeno_resume () {
   # Loop through to find/resume the session
   session_index=1
   for s in $(list_sessions); do
-    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
+    # Compute the repository path
+    repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+    session_name="$(git config --file=$repository_path/.git/config --get xeno.name)"
+
+    if [ "$mode" = "all" -o "$session_index" = "$session" -o "$session_name" = "$session" ]; then
       # Resume
 
       # Launch the editor
@@ -802,11 +839,12 @@ xeno_stop () {
   # Loop through to find/resume the session
   session_index=1
   for s in $(list_sessions); do
-    if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
-      # Stop
+    # Compute the repository path
+    repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+    session_name="$(git config --file=$repository_path/.git/config --get xeno.name)"
 
-      # Compute the repository path
-      repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+    if [ "$mode" = "all" -o "$session_index" = "$session" -o "$session_name" = "$session" ]; then
+      # Stop
 
       # Compute and parse the remote repository URL.  The URL will be of the
       # form:
@@ -926,11 +964,12 @@ xeno_sync () {
   # Loop through to find/resume the session
   session_index=1
   for s in $(list_sessions); do
+    # Compute the repository path
+    repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
+    session_name="$(git config --file=$repository_path/.git/config --get xeno.name)"
+
     if [ "$mode" = "all" -o "$session_index" = "$session" ]; then
       # Synchronize
-
-      # Compute the repository path
-      repository_path="$XENO_LOCAL_SESSION_DIRECTORY/$s"
 
       # Add any local changes or create a dummy commit if we're forcing things
       uncommitted=$(cd "$repository_path" && git status --porcelain)
