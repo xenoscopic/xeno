@@ -97,7 +97,7 @@ Before using xeno, it is strongly recommended (though by no means essential)
 that you set up SSH connection multiplexing.  This allows you to persist SSH
 connections and re-use them, and will make SSH, Git, and xeno much faster for
 you.  Instead of trying to give instructions here, I'll point you to this
-[awesome article by Rackspace](developer.rackspace.com/blog/speeding-up-ssh-session-creation.html)
+[awesome article by Rackspace](http://developer.rackspace.com/blog/speeding-up-ssh-session-creation.html)
 which gives an overview of the process. 
 
 The xeno program is a portable shell script, so you can simply download it from
