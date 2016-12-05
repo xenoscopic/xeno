@@ -4,7 +4,7 @@ class Xeno < Formula
   homepage 'http://xeno.io'
   url 'https://github.com/havoc-io/xeno/archive/1.0.5.tar.gz'
   version '1.0.5'
-  sha1 '5c5f962509b33b8ba7e4ad17af69f506cdd77256'
+  sha256 '2a04ff2d221f75e7222627222c9ed1267d2ceb4fba19ca7de504508acd484a06' 
 
   def install
     bin.install 'xeno'
