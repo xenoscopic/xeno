@@ -1,3 +1,5 @@
+*UN(DER)MAINTAINED*: This tool is essentially no longer maintained. Its design had some serious flaws with respect to growing repsitory size, inefficient polling, and slow synchronization. I've created something better now called [Mutagen](https://github.com/havoc-io/mutagen) that might interest the same crowd (and perhaps even more people).
+
 xeno
 ====
 
