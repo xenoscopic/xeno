@@ -3,8 +3,12 @@ language: shell
 
 # Install build dependencies
 install:
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-get -qq update
   - sudo apt-get -qq install git devscripts shunit2 openssh-client openssh-server
+  - sudo apt-get -qq install g++-4.8
+  - export CXX="g++-4.8" CC="gcc-4.8"
+  - sudo -E scripts/ci-install-fswatch.sh
 
 # Setup SSH infrastructure necessary to run tests
 before_script:
@@ -17,6 +21,7 @@ script:
   - shunit2 scripts/ci-test-xeno.sh
   - shunit2 scripts/ci-test-xeno-config.sh
   - shunit2 scripts/ci-test-xeno-daemon.sh
+  - shunit2 scripts/ci-test-xeno-fswatch.sh
   - shunit2 scripts/ci-test-xeno-editing.sh
 
 # Send notifications
